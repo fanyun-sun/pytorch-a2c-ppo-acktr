@@ -111,6 +111,7 @@ def main():
         rollouts.cuda()
 
     start = time.time()
+    scale = 1.
     for j in range(num_updates):
         for step in range(args.num_steps):
             # Sample actions
@@ -171,21 +172,26 @@ def main():
 
             torch.save(save_model, os.path.join(save_path, args.env_name + ".pt"))
 
+        assert actor_critic.scale == actor_criti.base.scale == scale
+        if j % args.scale_interval == 0 and j:
+            actor_critic.rescale(.95)
+            scale *= .95
+
         if j % args.log_interval == 0:
             end = time.time()
             total_num_steps = (j + 1) * args.num_processes * args.num_steps
-            print("Updates {}, num timesteps {}, FPS {}, mean/median reward {:.1f}/{:.1f}, min/max reward {:.1f}/{:.1f}, entropy {:.5f}, value loss {:.5f}, policy loss {:.5f}".
+            print("Updates {}, num timesteps {}, FPS {}, mean/median reward {:.1f}/{:.1f}, min/max reward {:.1f}/{:.1f}, entropy {:.5f}, value loss {:.5f}, policy loss {:.5f}, scale {:.5f}".
                 format(j, total_num_steps,
                        int(total_num_steps / (end - start)),
                        final_rewards.mean(),
                        final_rewards.median(),
                        final_rewards.min(),
                        final_rewards.max(), dist_entropy,
-                       value_loss, action_loss))
+                       value_loss, action_loss, scale))
         if args.vis and j % args.vis_interval == 0:
             try:
                 # Sometimes monitor doesn't properly flush the outputs
-                win = visdom_plot(viz, win, args.log_dir, args.env_name,
+                win = visdom_plot(viz, win, args.log_dir, args.plot_title,
                                   args.algo, args.num_frames)
             except IOError:
                 pass

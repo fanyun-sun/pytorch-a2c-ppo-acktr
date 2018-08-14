@@ -32,6 +32,15 @@ class Policy(nn.Module):
             raise NotImplementedError
 
         self.state_size = self.base.state_size
+        self.scale = 1.
+
+    def rescale(self, ratio):
+        for idx, m in enumerate(self.base.critic.modules()):
+            if isinstance(m, nn.Linear):
+                m.weight.data.mul_(ratio ** (1./3))
+                m.bias.data.mul_(ratio ** ((idx+1)/3))
+        self.scale *= ratio
+        self.base.scale = self.scale
 
     def forward(self, inputs, states, masks):
         raise NotImplementedError
@@ -141,7 +150,6 @@ class CNNBase(nn.Module):
 
         return self.critic_linear(x), x, states
 
-
 class MLPBase(nn.Module):
     def __init__(self, num_inputs):
         super(MLPBase, self).__init__()
@@ -152,21 +160,22 @@ class MLPBase(nn.Module):
 
         self.actor = nn.Sequential(
             init_(nn.Linear(num_inputs, 64)),
-            nn.Tanh(),
+            nn.ReLU(),
             init_(nn.Linear(64, 64)),
             nn.Tanh()
         )
 
         self.critic = nn.Sequential(
             init_(nn.Linear(num_inputs, 64)),
-            nn.Tanh(),
+            nn.ReLU(),
             init_(nn.Linear(64, 64)),
-            nn.Tanh()
+            nn.ReLU(),
+            init_(nn.Linear(64,1)),
         )
 
-        self.critic_linear = init_(nn.Linear(64, 1))
-
+        # self.critic_linear = init_(nn.Linear(64, 1))
         self.train()
+        self.scale = 1.
 
     @property
     def state_size(self):
@@ -177,7 +186,8 @@ class MLPBase(nn.Module):
         return 64
 
     def forward(self, inputs, states, masks):
-        hidden_critic = self.critic(inputs)
+        hidden_critic = self.critic(inputs)/self.scale
         hidden_actor = self.actor(inputs)
 
-        return self.critic_linear(hidden_critic), hidden_actor, states
+        # return self.critic_linear(hidden_critic), hidden_actor, states
+        return hidden_critic, hidden_actor, states
