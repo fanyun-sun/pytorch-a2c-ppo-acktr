@@ -153,6 +153,13 @@ def main():
 
         value_loss, action_loss, dist_entropy = agent.update(rollouts)
 
+        if j % args.log_interval == 0:
+            # this is used for testing saturation
+            relu1, relu2 = actor_critic.base_forward(
+                    rollouts.observations[:-1].view(-1, *rollouts.observations.size()[2:]))
+                # rollouts.states[0].view(-1, actor_critic.state_size),
+                # rollouts.masks[:-1].view(-1, 1))
+
         rollouts.after_update()
 
         if j % args.save_interval == 0 and args.save_dir != "":
@@ -172,7 +179,8 @@ def main():
 
             torch.save(save_model, os.path.join(save_path, args.env_name + ".pt"))
 
-        assert actor_critic.scale == actor_criti.base.scale == scale
+        assert actor_critic.scale == actor_critic.base.scale == scale
+
         if j % args.scale_interval == 0 and j:
             actor_critic.rescale(.95)
             scale *= .95
@@ -180,14 +188,24 @@ def main():
         if j % args.log_interval == 0:
             end = time.time()
             total_num_steps = (j + 1) * args.num_processes * args.num_steps
-            print("Updates {}, num timesteps {}, FPS {}, mean/median reward {:.1f}/{:.1f}, min/max reward {:.1f}/{:.1f}, entropy {:.5f}, value loss {:.5f}, policy loss {:.5f}, scale {:.5f}".
+
+            from saturation import log_saturation
+
+            relu1, relu2 = log_saturation(fname=args.saturation_log,
+                           first=(j==0),
+                           relu1=relu1.cpu().detach().numpy(),
+                           relu2=relu2.cpu().detach().numpy())
+
+            print("Updates {}, num timesteps {}, FPS {}, mean/median reward {:.1f}/{:.1f}, min/max reward {:.1f}/{:.1f}, entropy {:.5f}, value loss {:.5f}, policy loss {:.5f}, scale {:.5f}, relu1 {:.5f}, relu2 {:.5f}".
                 format(j, total_num_steps,
                        int(total_num_steps / (end - start)),
                        final_rewards.mean(),
                        final_rewards.median(),
                        final_rewards.min(),
                        final_rewards.max(), dist_entropy,
-                       value_loss, action_loss, scale))
+                       value_loss, action_loss, scale, relu1, relu2))
+
+                           
         if args.vis and j % args.vis_interval == 0:
             try:
                 # Sometimes monitor doesn't properly flush the outputs

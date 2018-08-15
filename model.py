@@ -35,7 +35,7 @@ class Policy(nn.Module):
         self.scale = 1.
 
     def rescale(self, ratio):
-        for idx, m in enumerate(self.base.critic.modules()):
+        for idx, m in enumerate(self.base.critic1.modules()):
             if isinstance(m, nn.Linear):
                 m.weight.data.mul_(ratio ** (1./3))
                 m.bias.data.mul_(ratio ** ((idx+1)/3))
@@ -62,6 +62,20 @@ class Policy(nn.Module):
     def get_value(self, inputs, states, masks):
         value, _, _ = self.base(inputs, states, masks)
         return value
+    
+    def base_forward(self, inputs):
+        ret = []
+
+        x = inputs
+        for m in self.base.critic1.modules():
+            if isinstance(m, nn.Sequential):
+                continue
+            x = m(x)
+            if isinstance(m, nn.ReLU):
+                ret.append(x)
+        assert len(ret) == 2
+        return ret
+
 
     def evaluate_actions(self, inputs, states, masks, action):
         value, actor_features, states = self.base(inputs, states, masks)
@@ -165,7 +179,19 @@ class MLPBase(nn.Module):
             nn.Tanh()
         )
 
-        self.critic = nn.Sequential(
+        # self.linear1 = init_(nn.Linear(num_inputs, 64))
+        # self.linear2 = init_(nn.Linear(64, 64))
+        # self.linear3 = init_(nn.Linear(64, 1))
+
+        self.critic1 = nn.Sequential(
+            init_(nn.Linear(num_inputs, 64)),
+            nn.ReLU(),
+            init_(nn.Linear(64, 64)),
+            nn.ReLU(),
+            init_(nn.Linear(64,1)),
+        )
+
+        self.critic2 = nn.Sequential(
             init_(nn.Linear(num_inputs, 64)),
             nn.ReLU(),
             init_(nn.Linear(64, 64)),
@@ -186,8 +212,26 @@ class MLPBase(nn.Module):
         return 64
 
     def forward(self, inputs, states, masks):
-        hidden_critic = self.critic(inputs)/self.scale
+
+        # self.relu1 = F.relu(self.linear1(inputs))
+        # self.relu2 = F.relu(self.linear2(self.relu1))
+        # self.critic = self.linear3(self.relu2)
+        # hidden_critic = (self.critic/self.scale + self.critic2(inputs))/2
+        hidden_critic = (self.critic1(inputs) + self.critic2(inputs))/2
         hidden_actor = self.actor(inputs)
 
         # return self.critic_linear(hidden_critic), hidden_actor, states
         return hidden_critic, hidden_actor, states
+
+if __name__=='__main__':
+    model = MLPBase(1)
+    x = torch.FloatTensor([[1], [-1]])
+    for m in model.critic1.modules():
+        x = m(x)
+        print('after', m, x)
+
+    for idx, m in enumerate(model.critic1.modules()):
+        if isinstance(m, nn.Linear):
+            print(idx, m)
+        if isinstance(m, nn.ReLU):
+            print(idx, m)
