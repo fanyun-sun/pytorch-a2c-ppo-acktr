@@ -206,6 +206,11 @@ def main():
                        value_loss, action_loss, scale))
             print("saturation", relus)
 
+            if relus[1] > args.scale_threshold:
+                actor_critic.rescale(.95)
+                scale *= .95
+
+
                            
         if args.vis and j % args.vis_interval == 0:
             try:

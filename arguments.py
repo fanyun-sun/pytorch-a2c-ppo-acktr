@@ -8,8 +8,10 @@ def get_args():
     parser.add_argument('--algo', default='a2c',
                         help='algorithm to use: a2c | ppo | acktr')
 
-    parser.add_argument('--scale-interval', type=int, default=10000,
+    parser.add_argument('--scale-interval', type=int, default=100000000000,
                         help='reward scaling internal')
+    parser.add_argument('--scale-threshold', type=float, default=100.,
+                        help='saturation threshold to apply scaling')
     parser.add_argument('--plot-title', type=str, 
                         help='title for visdom plot')
     parser.add_argument('--saturation-log', type=str, 
