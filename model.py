@@ -183,7 +183,7 @@ class MLPBase(nn.Module):
         # self.linear2 = init_(nn.Linear(64, 64))
         # self.linear3 = init_(nn.Linear(64, 1))
 
-        hidden_size = 256
+        hidden_size = 8
         self.critic1 = nn.Sequential(
             init_(nn.Linear(num_inputs, hidden_size)),
             nn.ReLU(),
