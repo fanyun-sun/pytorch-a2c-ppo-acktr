@@ -14,6 +14,8 @@ def get_args():
                         help='title for visdom plot')
     parser.add_argument('--saturation-log', type=str, 
                         help='path to saturation log')
+    parser.add_argument('--reward-scaling', type=float,  default=1.,
+                        help='reward scaling')
 
     parser.add_argument('--lr', type=float, default=7e-4,
                         help='learning rate (default: 7e-4)')
