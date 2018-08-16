@@ -72,8 +72,8 @@ class Policy(nn.Module):
                 continue
             x = m(x)
             if isinstance(m, nn.ReLU):
-                ret.append(x)
-        assert len(ret) == 2
+                ret.append(x.clone())
+        # assert len(ret) == 1
         return ret
 
 
@@ -183,20 +183,21 @@ class MLPBase(nn.Module):
         # self.linear2 = init_(nn.Linear(64, 64))
         # self.linear3 = init_(nn.Linear(64, 1))
 
+        hidden_size = 256
         self.critic1 = nn.Sequential(
-            init_(nn.Linear(num_inputs, 64)),
+            init_(nn.Linear(num_inputs, hidden_size)),
             nn.ReLU(),
-            init_(nn.Linear(64, 64)),
+            init_(nn.Linear(hidden_size, hidden_size)),
             nn.ReLU(),
-            init_(nn.Linear(64,1)),
+            init_(nn.Linear(hidden_size,1)),
         )
 
         self.critic2 = nn.Sequential(
-            init_(nn.Linear(num_inputs, 64)),
+            init_(nn.Linear(num_inputs, hidden_size)),
             nn.ReLU(),
-            init_(nn.Linear(64, 64)),
+            init_(nn.Linear(hidden_size, hidden_size)),
             nn.ReLU(),
-            init_(nn.Linear(64,1)),
+            init_(nn.Linear(hidden_size,1)),
         )
 
         # self.critic_linear = init_(nn.Linear(64, 1))
@@ -216,8 +217,8 @@ class MLPBase(nn.Module):
         # self.relu1 = F.relu(self.linear1(inputs))
         # self.relu2 = F.relu(self.linear2(self.relu1))
         # self.critic = self.linear3(self.relu2)
-        # hidden_critic = (self.critic/self.scale + self.critic2(inputs))/2
-        hidden_critic = (self.critic1(inputs) + self.critic2(inputs))/2
+        hidden_critic = (self.critic1(inputs)/self.scale + self.critic2(inputs))/2
+        # hidden_critic = (self.critic1(inputs) + self.critic2(inputs))/2
         hidden_actor = self.actor(inputs)
 
         # return self.critic_linear(hidden_critic), hidden_actor, states

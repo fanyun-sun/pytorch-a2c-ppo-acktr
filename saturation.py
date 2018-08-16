@@ -1,15 +1,15 @@
 import numpy as np
 import os
-def log_saturation(fname, first, relu1, relu2):
+def log_saturation(fname, first, relus):
 
     with open(fname, 'a+') as f:
         if first:
             if os.path.exists(fname): os.remove(fname)
-            f.write('relu1,relu2\n')
-        relu1 = get_saturation(relu1)
-        relu2 = get_saturation(relu2)
-        f.write('{},{}\n'.format(relu1, relu2))
-    return relu1, relu2
+            f.write(','.join(['relu{}'.format(i) for i in range(len(relus))]) + '\n')
+
+        ret = [get_saturation(relu) for relu in relus]
+        f.write(','.join(list(map(str, ret))) + '\n')
+    return ret
 
 
 def get_saturation(x):
