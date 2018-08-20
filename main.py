@@ -22,6 +22,7 @@ from visualize import visdom_plot
 
 import algo
 
+from saturation import *
 
 args = get_args()
 
@@ -70,7 +71,8 @@ def main():
     obs_shape = envs.observation_space.shape
     obs_shape = (obs_shape[0] * args.num_stack, *obs_shape[1:])
 
-    actor_critic = Policy(obs_shape, envs.action_space, args.recurrent_policy)
+    actor_critic = Policy(obs_shape, envs.action_space, args.recurrent_policy,
+                           args.hidden_size, args)
 
     if envs.action_space.__class__.__name__ == "Discrete":
         action_shape = 1
@@ -112,6 +114,8 @@ def main():
 
     start = time.time()
     scale = 1.
+    current_pdrr = [0., 0.]
+    last_update = 0
     for j in range(num_updates):
         for step in range(args.num_steps):
             # Sample actions
@@ -182,7 +186,7 @@ def main():
 
         assert actor_critic.scale == actor_critic.base.scale == scale
 
-        if j % args.scale_interval == 0 and j:
+        if j % args.scale_interval == 0 and j and args.scale_threshold > 1.:
             actor_critic.rescale(.95)
             scale *= .95
 
@@ -190,11 +194,15 @@ def main():
             end = time.time()
             total_num_steps = (j + 1) * args.num_processes * args.num_steps
 
-            from saturation import log_saturation
 
             relus = log_saturation(fname=args.saturation_log,
                            first=(j==0),
                            relus=[relu.cpu().detach().numpy() for relu in relus])
+
+            print("saturation", relus)
+            if j > 0:
+                relus = incremental_update(current_pdrr, relus, j)
+            current_pdrr = relus
 
             print("Updates {}, num timesteps {}, FPS {}, mean/median reward {:.1f}/{:.1f}, min/max reward {:.1f}/{:.1f}, entropy {:.5f}, value loss {:.5f}, policy loss {:.5f}, scale {:.5f}".
                 format(j, total_num_steps,
@@ -204,9 +212,10 @@ def main():
                        final_rewards.min(),
                        final_rewards.max(), dist_entropy,
                        value_loss, action_loss, scale))
-            print("saturation", relus)
+            print("current pdrr", current_pdrr)
 
-            if relus[1] > args.scale_threshold:
+            if relus[1] > args.scale_threshold and j-last_update > args.scale_interval:
+                last_update = j
                 actor_critic.rescale(.95)
                 scale *= .95
 

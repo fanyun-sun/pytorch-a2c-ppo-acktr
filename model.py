@@ -11,14 +11,20 @@ class Flatten(nn.Module):
 
 
 class Policy(nn.Module):
-    def __init__(self, obs_shape, action_space, recurrent_policy):
+    def __init__(self,
+                 obs_shape,
+                 action_space,
+                 recurrent_policy,
+                 hidden_size,
+                 args):
+
         super(Policy, self).__init__()
         if len(obs_shape) == 3:
             self.base = CNNBase(obs_shape[0], recurrent_policy)
         elif len(obs_shape) == 1:
             assert not recurrent_policy, \
                 "Recurrent policy is not implemented for the MLP controller"
-            self.base = MLPBase(obs_shape[0])
+            self.base = MLPBase(obs_shape[0], hidden_size, args)
         else:
             raise NotImplementedError
 
@@ -32,6 +38,7 @@ class Policy(nn.Module):
             raise NotImplementedError
 
         self.state_size = self.base.state_size
+        self.leaky = args.leaky
         self.scale = 1.
 
     def rescale(self, ratio):
@@ -71,9 +78,14 @@ class Policy(nn.Module):
             if isinstance(m, nn.Sequential):
                 continue
             x = m(x)
-            if isinstance(m, nn.ReLU):
-                ret.append(x.clone())
-        # assert len(ret) == 1
+            if self.leaky:
+                if isinstance(m, nn.LeakyReLU):
+                    ret.append(x.clone())
+            else:
+                if isinstance(m, nn.ReLU):
+                    ret.append(x.clone())
+
+        assert len(ret) == 2
         return ret
 
 
@@ -165,7 +177,7 @@ class CNNBase(nn.Module):
         return self.critic_linear(x), x, states
 
 class MLPBase(nn.Module):
-    def __init__(self, num_inputs):
+    def __init__(self, num_inputs, hidden_size, args):
         super(MLPBase, self).__init__()
 
         init_ = lambda m: init(m,
@@ -182,27 +194,43 @@ class MLPBase(nn.Module):
         # self.linear1 = init_(nn.Linear(num_inputs, 64))
         # self.linear2 = init_(nn.Linear(64, 64))
         # self.linear3 = init_(nn.Linear(64, 1))
+        if args.leaky:
+            self.critic1 = nn.Sequential(
+                init_(nn.Linear(num_inputs, hidden_size)),
+                nn.LeakyReLU(),
+                init_(nn.Linear(hidden_size, hidden_size)),
+                nn.LeakyReLU(),
+                init_(nn.Linear(hidden_size,1)),
+            )
 
-        hidden_size = 8
-        self.critic1 = nn.Sequential(
-            init_(nn.Linear(num_inputs, hidden_size)),
-            nn.ReLU(),
-            init_(nn.Linear(hidden_size, hidden_size)),
-            nn.ReLU(),
-            init_(nn.Linear(hidden_size,1)),
-        )
+            self.critic2 = nn.Sequential(
+                init_(nn.Linear(num_inputs, hidden_size)),
+                nn.LeakyReLU(),
+                init_(nn.Linear(hidden_size, hidden_size)),
+                nn.LeakyReLU(),
+                init_(nn.Linear(hidden_size,1)),
+            )
+        else:
+            self.critic1 = nn.Sequential(
+                init_(nn.Linear(num_inputs, hidden_size)),
+                nn.ReLU(),
+                init_(nn.Linear(hidden_size, hidden_size)),
+                nn.ReLU(),
+                init_(nn.Linear(hidden_size,1)),
+            )
 
-        self.critic2 = nn.Sequential(
-            init_(nn.Linear(num_inputs, hidden_size)),
-            nn.ReLU(),
-            init_(nn.Linear(hidden_size, hidden_size)),
-            nn.ReLU(),
-            init_(nn.Linear(hidden_size,1)),
-        )
+            self.critic2 = nn.Sequential(
+                init_(nn.Linear(num_inputs, hidden_size)),
+                nn.ReLU(),
+                init_(nn.Linear(hidden_size, hidden_size)),
+                nn.ReLU(),
+                init_(nn.Linear(hidden_size,1)),
+            )
 
         # self.critic_linear = init_(nn.Linear(64, 1))
         self.train()
         self.scale = 1.
+        self.network_ratio = args.network_ratio
 
     @property
     def state_size(self):
@@ -217,7 +245,10 @@ class MLPBase(nn.Module):
         # self.relu1 = F.relu(self.linear1(inputs))
         # self.relu2 = F.relu(self.linear2(self.relu1))
         # self.critic = self.linear3(self.relu2)
-        hidden_critic = (self.critic1(inputs)/self.scale + self.critic2(inputs))/2
+
+        # hidden_critic = (self.critic1(inputs)/self.scale + self.critic2(inputs))/2
+        hidden_critic = self.network_ratio * self.critic1(inputs)/self.scale + (1-self.network_ratio) * self.critic2(inputs)
+        # hidden_critic = self.critic1(inputs)/self.scale
         # hidden_critic = (self.critic1(inputs) + self.critic2(inputs))/2
         hidden_actor = self.actor(inputs)
 

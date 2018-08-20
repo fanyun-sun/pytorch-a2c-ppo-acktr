@@ -8,6 +8,8 @@ def get_args():
     parser.add_argument('--algo', default='a2c',
                         help='algorithm to use: a2c | ppo | acktr')
 
+    parser.add_argument('--hidden_size', type=int, default=64,
+                        help='hidden size of critic(value network)')
     parser.add_argument('--scale-interval', type=int, default=100000000000,
                         help='reward scaling internal')
     parser.add_argument('--scale-threshold', type=float, default=100.,
@@ -18,6 +20,10 @@ def get_args():
                         help='path to saturation log')
     parser.add_argument('--reward-scaling', type=float,  default=1.,
                         help='reward scaling')
+    parser.add_argument('--leaky', action='store_true', default=False,
+                        help='whether to use leaky relu instead of relu')
+    parser.add_argument('--network_ratio', type=float, default=.1,
+                        help='weight for the dynamic scaling network')
 
     parser.add_argument('--lr', type=float, default=7e-4,
                         help='learning rate (default: 7e-4)')

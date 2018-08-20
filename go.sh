@@ -2,25 +2,21 @@
 
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/willy/.mujoco/mjpro150/bin
 
-env=Hopper-v2
-dir=$env-network_8-scale_thresh_.4
+env=$1
+network_size=$2
+scale_interval=$3
+scale_threshold=$4
+
+dir=$env-network_$network_size-leaky
 
 python main.py --env-name "$env"  \
                --num-stack 1  \
+               --hidden_size $network_size \
                --num-frames 100000000  \
-               --max-grad-norm 100000000000  \
                --log-dir ./$dir \
-               --scale-interval 10000000000000 \
-               --scale-threshold .4 \
+               --scale-interval $scale_interval \
+               --scale-threshold $2 \
                --plot-title  $dir \
-               --saturation-log $dir.sat 
-
-
-python main.py --env-name "$env"  \
-               --num-stack 1  \
-               --num-frames 100000000  \
                --max-grad-norm 100000000000  \
-               --log-dir ./$dir \
-               --scale-interval 5000 \
-               --plot-title  $dir \
-               --saturation-log $dir.sat 
+               --saturation-log $dir/$dir.sat
+
