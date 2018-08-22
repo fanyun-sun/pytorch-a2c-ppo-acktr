@@ -40,7 +40,7 @@ if args.cuda:
 try:
     os.makedirs(args.log_dir)
 except OSError:
-    files = glob.glob(os.path.join(args.log_dir, '*.monitor.csv'))
+    files = glob.glob(os.path.join(args.log_dir, '*'))
     for f in files:
         os.remove(f)
 
@@ -186,9 +186,11 @@ def main():
 
         assert actor_critic.scale == actor_critic.base.scale == scale
 
-        if j % args.scale_interval == 0 and j and args.scale_threshold > 1.:
-            actor_critic.rescale(.95)
-            scale *= .95
+        if  True or j % args.scale_interval == 0 and j and args.scale_threshold > 1.:
+            actor_critic.rescale(args.reward_ratio)
+            scale *= args.reward_ratio
+            # adam_rescaling(args.reward_ratio, agent.optimizer)
+            rmsprop_rescaling(args.reward_ratio, agent.optimizer)
 
         if j % args.log_interval == 0:
             end = time.time()
@@ -201,8 +203,7 @@ def main():
 
             print("saturation", relus)
             if j > 0:
-                relus = incremental_update(current_pdrr, relus, j)
-            current_pdrr = relus
+                current_pdrr = incremental_update(current_pdrr, relus)
 
             print("Updates {}, num timesteps {}, FPS {}, mean/median reward {:.1f}/{:.1f}, min/max reward {:.1f}/{:.1f}, entropy {:.5f}, value loss {:.5f}, policy loss {:.5f}, scale {:.5f}".
                 format(j, total_num_steps,
@@ -212,13 +213,19 @@ def main():
                        final_rewards.min(),
                        final_rewards.max(), dist_entropy,
                        value_loss, action_loss, scale))
-            print("current pdrr", current_pdrr)
+            
+            if j:
+                cterm = 1-.999 ** (j//args.log_interval)
+            else:
+                cterm = 1.
+            print("current pdrr", np.array(current_pdrr)/cterm)
 
-            if relus[1] > args.scale_threshold and j-last_update > args.scale_interval:
+            if current_pdrr[1]/cterm > args.scale_threshold and j-last_update > args.scale_interval:
                 last_update = j
-                actor_critic.rescale(.95)
-                scale *= .95
-
+                actor_critic.rescale(args.reward_ratio)
+                scale *= args.reward_ratio
+                # adam_rescaling(args.reward_ratio, agent.optimizer)
+                rmsprop_rescaling(args.reward_ratio, agent.optimizer)
 
                            
         if args.vis and j % args.vis_interval == 0:

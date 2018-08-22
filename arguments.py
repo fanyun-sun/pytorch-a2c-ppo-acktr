@@ -22,8 +22,10 @@ def get_args():
                         help='reward scaling')
     parser.add_argument('--leaky', action='store_true', default=False,
                         help='whether to use leaky relu instead of relu')
-    parser.add_argument('--network_ratio', type=float, default=.1,
+    parser.add_argument('--network-ratio', type=float, default=.1,
                         help='weight for the dynamic scaling network')
+    parser.add_argument('--reward-ratio', type=float, default=.95,
+                        help='scaling gratio')
 
     parser.add_argument('--lr', type=float, default=7e-4,
                         help='learning rate (default: 7e-4)')

@@ -29,6 +29,8 @@ class A2C_ACKTR(object):
         else:
             self.optimizer = optim.RMSprop(
                 actor_critic.parameters(), lr, eps=eps, alpha=alpha)
+            # self.optimizer = optim.Adam(
+                # actor_critic.parameters(), lr=lr, eps=eps)
 
     def update(self, rollouts):
         obs_shape = rollouts.observations.size()[2:]

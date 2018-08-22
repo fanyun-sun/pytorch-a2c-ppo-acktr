@@ -46,6 +46,7 @@ class Policy(nn.Module):
             if isinstance(m, nn.Linear):
                 m.weight.data.mul_(ratio ** (1./3))
                 m.bias.data.mul_(ratio ** ((idx+1)/3))
+
         self.scale *= ratio
         self.base.scale = self.scale
 

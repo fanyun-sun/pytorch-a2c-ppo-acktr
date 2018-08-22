@@ -12,28 +12,34 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
+from pylab import rcParams
+rcParams['figure.figsize'] = 10, 5
+markers = ['o', 'v', 's', '^', 'D']
 
-def plot_reward(dir_names, legends, title='Hopper-v2', num=2500, shade=False):
+
+def plot_reward(dir_names, legends, title=None, num=None, shade=False):
 
     sns.color_palette('hls', 10)
-    x_label = 'number of episodes'
+    x_label = 'num frames'
     y_label = 'cumulative reward'
-    hue = 'reward scaling'
+    legend_title = hue = ''
 
     dfss = []
     for idx, dir_name in enumerate(dir_names):
         files = glob('{}/*.monitor.csv'.format(dir_name))
-        if num is not None:
-            minlen = num
-        else:
-            minlen = min([pd.read_csv(f, skiprows=1).shape[0] for f in files])
 
-        print(dir_name, minlen)
+        minlen = num
+        # if num is not None:
+            # minlen = num
+        # else:
+            # minlen = min([pd.read_csv(f, skiprows=1).shape[0] for f in files])
+
+        print(dir_name, num)
         if shade:
             dfs = []
             for f in files:
                 res = pd.read_csv(f, skiprows=1)['r'].values[:minlen]
-                res = pd.rolling_mean(res, window=20)
+                res = pd.rolling_mean(res, window=100)
 
                 df = pd.DataFrame()
                 df[y_label] = res
@@ -44,38 +50,54 @@ def plot_reward(dir_names, legends, title='Hopper-v2', num=2500, shade=False):
             dfs = pd.concat(dfs)
             dfss.append(dfs)
         else:
-            res = pd.read_csv(files[0], skiprows=1)['r'].values[:minlen]
-            for f in files[1:]:
-                res += pd.read_csv(f, skiprows=1)['r'].values[:minlen]
-            res /= len(files)
-            res = pd.rolling_mean(res, window=20)
-            df = pd.DataFrame()
-            df[y_label] = res
-            df[x_label] = np.arange(res.shape[0])
-            df[hue] = legends[idx]
-            dfss.append(df)
+            for f in files[:1]:
+                tmpdf = pd.read_csv(f, skiprows=1)  
 
-    
-    df = pd.concat(dfss)
-    df[hue] = df[hue].astype(str)
+                # df[y_label] = pd.rolling_mean(tmpdf['r'].values[:minlen], window=500)
+                # df[x_label] = tmpdf['l'].cumsum().values[:minlen]
 
-    sns.lineplot(x=x_label, y=y_label, hue=hue, data=df)
+                y = pd.rolling_mean(tmpdf['r'], window=100).values
+                x = tmpdf['l'] = tmpdf['l'].cumsum().values
+                
+
+                if num is not None:
+                    x = tmpdf[tmpdf.l < num]['l']
+                    y = y[:x.shape[0]]
+                
+                print(x.shape, y.shape)
+                plt.plot(x, y, label=legends[idx])
+
+
+    # df = pd.concat(dfss)
+    # df = df.append({x_label:0, y_label:0, hue:'dummy'}, ignore_index=True)
+    # g = sns.lineplot(x=x_label, y=y_label, hue=hue, data=df, style=hue)
+    # g = sns.lineplot(x=x_label, y=y_label, hue=hue, style=hue, markers=['o', 'v', 's', 'p'], dashes=False, data=df, markevery=100)
+    # g = sns.lineplot(x=x_label, y=y_label, hue=hue, style=hue, markers=True, dashes=False, data=df, markevery=100)
+
+    # box = g.get_position()
+    # g.set_position([box.x0, box.y0, box.width * 0.75, box.height]) # resize position
 
     if title is not None:
         plt.title(title)
+    # plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+
+    plt.legend(title=legend_title, prop={'size':6})
     plt.savefig('reward.png')
+
     plt.close()
 
 def incremental(x):
-    beta = .5
-    ret = np.zeros(x.shape)
+    print(x)
+    beta = .9
+    ret = np.zeros(len(x))
     ret[0] = x[0]
     for i in range(1, ret.shape[0]):
-        ret[i] = beta * ret[i-1] + (1-beta) * x[i]
+            ret[i] = (beta * ret[i-1] + (1-beta) * x[i]) / (1-beta ** i)
+    print(ret)
     return ret
 
 
-def plot_saturation(fnames, legends, title=None, num=24000):
+def plot_saturation(fnames, legends, title=None, num=None):
     fnames = ['{}/{}.sat'.format(x, os.path.basename(x)) for x in fnames]
     xlabel = 'number of updates'
     ylabel = 'PDRR'
@@ -84,7 +106,8 @@ def plot_saturation(fnames, legends, title=None, num=24000):
         # plt.plot(pd.rolling_mean(df.iloc[:, 0][:num], window=100), label='{}-relu1'.format(legends[idx]))
         # plt.plot(incremental(df.iloc[:, 0][:num]), label='{}-relu1'.format(legends[idx]))
 
-        plt.plot(pd.rolling_mean(df.iloc[:, 1][:num], window=100), label='{}-relu2'.format(legends[idx]))
+        y = pd.rolling_mean(df.iloc[:, 1] ,window=100)[:num]
+        plt.plot(np.arange(y.shape[0])*10, y, label='{}-relu2'.format(legends[idx]))
     if title is not None:
         plt.title(title)
     plt.legend()
@@ -93,10 +116,13 @@ def plot_saturation(fnames, legends, title=None, num=24000):
     plt.savefig('saturation.png')
     plt.close()
 
-def plot_dirs(dirs):
-    print(dirs)
-    plot_reward(dirs, dirs)
-    plot_saturation(['{}/{}.sat'.format(x, os.path.basename(x)) for x in dirs], dirs)
+def plot_dirs(dirs, legends=None):
+    if legends is not None:
+        plot_reward(dirs, legends)
+        plot_saturation(dirs, legends)
+    else:
+        plot_reward(dirs, dirs)
+        plot_saturation(dirs, dirs)
 
 if __name__ == '__main__':
 
@@ -163,7 +189,54 @@ if __name__ == '__main__':
     # plot_directory('../Walker-2d-v2')
     # plot_dirs(glob('HalfCheetah-v2-network_64*') + ['../HalfCheetah-v2/grad_clipping'])
     # plot_dirs(glob('../Hopper-v2/Hopper-v2-rewrard_scale*'))
-    pref = '../Hopper-v2/Hopper-v2-rewrard_scale-'
-    plot_reward([f'{pref}{x}' for x in ['.5', '1', '5', '10']]+ ['Hopper-v2-network_64-rewrard_scale-20'], ['ratio .5', 'ratio 1', 'ratio 5', 'ratio 10', 'ratio 20'])
-    plot_saturation([f'{pref}{x}' for x in ['.5', '1', '5', '10']] + ['Hopper-v2-network_64-rewrard_scale-20'], ['ratio .5', 'ratio 1', 'ratio 5', 'ratio 10', 'ratio 20'])
+    # dirs = glob('Hopper-v2-*')
+    # for f in glob('Hopper-v2*lr*'):
+        # dirs.remove(f)
+
+    # dirs = glob('*reward*')
+    # dirs += ['../Hopper-v2/network_64', '../Hopper-v2/Hopper-v2-network_64-scale_thresh_.2']
+
+    # plot_dirs(dirs)
+
+    # plot_dirs(glob('Hopper-v2-network_64*') + ['../Hopper-v2/network_64'], None)
+
+    # plot_dirs(glob('HalfCheetah-v2-network_64*'))
+
+    # dirs = ['./Hopper-v2-network_64-network_ratio_.5-reward_scaling_1', 'Hopper-v2-network_64-network_ratio_1.-adam', './Hopper-v2-network_64-network_ratio_.1-rmsprop_rescaling', '../Hopper-v2/Hoper-network_6']
+    # legends = ['rmsprop', 'adam', 'rmsprop scaling']
+    # plot_reward(dirs,legends, title='Hopper-v2', num=None)
+    # plot_saturation(dirs, legends)
+    #plot_dirs(glob('../Swimmer-v2/*'))
+    # dirs = ['Hopper-v2-network_64-network_ratio_.5-reward_scaling_1']+glob('Hopper-v2-network_64-network_ratio_.5-lr*')
+
+    # legends = ['lr 4e-7', 'lr '+ dirs[1][-4:], 'lr ' + dirs[2][-4:]]
+    # legends = [x[-4:] for x in dirs]
+
+    # plot_reward(dirs, legends)
+    # plot_saturation(dirs, legends)
+    """
+    # dirs =glob('Hopper-v2-network_8*')
+    # dirs.remove('Hopper-v2-network_8-network_ratio_.5-reward_scaling_.25')
+    # dirs.remove('Hopper-v2-network_8-network_ratio_.5-reward_scaling_.5')
+    # dirs.remove('Hopper-v2-network_8-network_ratio_.5-reward_scaling_.25')
+    # plot_dirs(dirs)
+    """
+
+    pref = './Hopper-v2-network_64-network_ratio_.5-reward_scaling_'
+    scales =  ['.5', '.75', '1', '5', '10', '30', '100']
+    dirs = [f'{pref}{x}' for x in scales]
+    legends = scales
+    plot_reward(dirs, legends, num=3500)
+    # plot_saturation(dirs, legends)
+
+    # pref = 'Hopper-v2-network_64-network_ratio_.5-lr_'
+    # lrs = ['1e-5', '1e-4', '7e-4', '1e-3', '7e-3' ]
+    # dirs = ['{}{}'.format(pref, lr) for lr in lrs]
+    # dirs[2] = 'Hopper-v2-network_64-network_ratio_.5-reward_scaling_1'
+    # plot_reward(dirs, lrs, num=1200000) 
+    # plot_saturation(dirs, lrs, num=25000)
+
+    # dirs = ['Hopper-v2-network_64-network_ratio_.1-scaling_leaky', 'Hopper-v2-network_64-network_ratio_.1-rmsprop_rescaling', 'Hopper-v2-network_64-weight_.1']
+    # legends = ['leaky + out method', 'our method', 'original']
+    # plot_reward(dirs, legends)
 

@@ -13,7 +13,6 @@ def log_saturation(fname, first, relus):
 
 
 def get_saturation(x):
-    print(x.shape)
     """
     input:
         x: 2 dimensional numpy array, [batch, ]
@@ -25,6 +24,34 @@ def get_saturation(x):
 
     return ret.sum()/x[0, :].size
 
-def incremental_update(last_values, cur_values, timestep):
-    beta = .1
-    return [(last_value * beta + cur_value * (1-beta)) / (1 - beta ** timestep) for last_value, cur_value in zip(last_values, cur_values)]
+def incremental_update(last_values, cur_values):
+    beta = .999
+    return [(last_value * beta + cur_value * (1-beta)) for last_value, cur_value in zip(last_values, cur_values)]
+
+def adam_rescaling(scale, optimizer):
+    for group in optimizer.param_groups:
+        for idx in range(len(group['params'])):
+            p = group['params'][idx]
+            if p.grad is None:
+                continue
+            state = optimizer.state[p]
+            if idx % 2 == 0:
+                state['exp_avg']    *= (scale ** (1 / (len(group['params'])/2)))
+                state['exp_avg_sq'] *= (scale ** (2 / (len(group['params'])/2)))
+            else:
+                state['exp_avg']    *= (scale ** ((idx // 2 + 1) / (len(group['params'])/2)))
+                state['exp_avg_sq'] *= (scale ** ((idx // 2 + 1) * 2 / (len(group['params'])/2)))
+
+def rmsprop_rescaling(scale, optimizer):
+    for group in optimizer.param_groups:
+        for idx in range(len(group['params'])):
+            p = group['params'][idx]
+            if p.grad is None:
+                continue
+            state = optimizer.state[p]
+            if idx % 2 == 0:
+                # state['exp_avg']    *= (scale ** (1 / (len(group['params'])/2)))
+                state['square_avg'] *= (scale ** (2 / (len(group['params'])/2)))
+            else:
+                # state['exp_avg']    *= (scale ** ((idx // 2 + 1) / (len(group['params'])/2)))
+                state['square_avg'] *= (scale ** ((idx // 2 + 1) * 2 / (len(group['params'])/2)))
