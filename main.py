@@ -186,7 +186,7 @@ def main():
 
         assert actor_critic.scale == actor_critic.base.scale == scale
 
-        if  True or j % args.scale_interval == 0 and j and args.scale_threshold > 1.:
+        if  j % args.scale_interval == 0 and j and args.scale_threshold > 1.:
             actor_critic.rescale(args.reward_ratio)
             scale *= args.reward_ratio
             # adam_rescaling(args.reward_ratio, agent.optimizer)

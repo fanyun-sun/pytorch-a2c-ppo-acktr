@@ -13,16 +13,17 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from pylab import rcParams
-rcParams['figure.figsize'] = 10, 5
+print(rcParams['figure.figsize'])
+rcParams['figure.figsize'] = 8, 4
 markers = ['o', 'v', 's', '^', 'D']
 
 
 def plot_reward(dir_names, legends, title=None, num=None, shade=False):
 
     sns.color_palette('hls', 10)
-    x_label = 'num frames'
+    x_label = 'million frames'
     y_label = 'cumulative reward'
-    legend_title = hue = ''
+    legend_title = hue = 'reward scaling'
 
     dfss = []
     for idx, dir_name in enumerate(dir_names):
@@ -39,7 +40,7 @@ def plot_reward(dir_names, legends, title=None, num=None, shade=False):
             dfs = []
             for f in files:
                 res = pd.read_csv(f, skiprows=1)['r'].values[:minlen]
-                res = pd.rolling_mean(res, window=100)
+                res = pd.rolling_mean(res, window=500)
 
                 df = pd.DataFrame()
                 df[y_label] = res
@@ -56,7 +57,7 @@ def plot_reward(dir_names, legends, title=None, num=None, shade=False):
                 # df[y_label] = pd.rolling_mean(tmpdf['r'].values[:minlen], window=500)
                 # df[x_label] = tmpdf['l'].cumsum().values[:minlen]
 
-                y = pd.rolling_mean(tmpdf['r'], window=100).values
+                y = pd.rolling_mean(tmpdf['r'], window=500).values
                 x = tmpdf['l'] = tmpdf['l'].cumsum().values
                 
 
@@ -64,6 +65,7 @@ def plot_reward(dir_names, legends, title=None, num=None, shade=False):
                     x = tmpdf[tmpdf.l < num]['l']
                     y = y[:x.shape[0]]
                 
+                x /= 1000000
                 print(x.shape, y.shape)
                 plt.plot(x, y, label=legends[idx])
 
@@ -74,14 +76,20 @@ def plot_reward(dir_names, legends, title=None, num=None, shade=False):
     # g = sns.lineplot(x=x_label, y=y_label, hue=hue, style=hue, markers=['o', 'v', 's', 'p'], dashes=False, data=df, markevery=100)
     # g = sns.lineplot(x=x_label, y=y_label, hue=hue, style=hue, markers=True, dashes=False, data=df, markevery=100)
 
-    # box = g.get_position()
-    # g.set_position([box.x0, box.y0, box.width * 0.75, box.height]) # resize position
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.gcf().subplots_adjust(bottom=0.15)
+
+    ax = plt.gca()
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width * 0.8, box.height]) # resize position
 
     if title is not None:
         plt.title(title)
-    # plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+    plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., title=legend_title)
 
-    plt.legend(title=legend_title, prop={'size':6})
+    # plt.tight_layout()
+
     plt.savefig('reward.png')
 
     plt.close()
@@ -99,22 +107,39 @@ def incremental(x):
 
 def plot_saturation(fnames, legends, title=None, num=None):
     fnames = ['{}/{}.sat'.format(x, os.path.basename(x)) for x in fnames]
-    xlabel = 'number of updates'
-    ylabel = 'PDRR'
-    for idx, fname in enumerate(fnames):
-        df = pd.read_csv(fname, header=None)
-        # plt.plot(pd.rolling_mean(df.iloc[:, 0][:num], window=100), label='{}-relu1'.format(legends[idx]))
-        # plt.plot(incremental(df.iloc[:, 0][:num]), label='{}-relu1'.format(legends[idx]))
+    x_label = 'million frames'
+    y_label = 'PDRR'
+    legend_title= 'reward scaling'
+    def go(layeridx):
+        for idx, fname in enumerate(fnames):
+            df = pd.read_csv(fname, header=None)
+            if layeridx == 2:
+                y = pd.rolling_mean(df.iloc[:, 1] ,window=500)[:num]
+                plt.plot(np.arange(y.shape[0])*10/1e6 * 5, y, label='{}-relu{}'.format(legends[idx], layeridx))
+            else:
+                y = pd.rolling_mean(df.iloc[:, 0] ,window=500)[:num]
+                plt.plot(np.arange(y.shape[0])*10/1e6 * 5, y, label='{}-relu{}'.format(legends[idx], layeridx))
 
-        y = pd.rolling_mean(df.iloc[:, 1] ,window=100)[:num]
-        plt.plot(np.arange(y.shape[0])*10, y, label='{}-relu2'.format(legends[idx]))
-    if title is not None:
-        plt.title(title)
-    plt.legend()
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-    plt.savefig('saturation.png')
-    plt.close()
+        if title is not None:
+            plt.title(title)
+
+        plt.xlabel(x_label)
+        plt.ylabel(y_label)
+        plt.gcf().subplots_adjust(bottom=0.15)
+
+        ax = plt.gca()
+        box = ax.get_position()
+        ax.set_position([box.x0, box.y0, box.width * 0.8, box.height]) # resize position
+
+        if title is not None:
+            plt.title(title)
+        plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., title=legend_title)
+
+        # plt.tight_layout()
+        plt.savefig(f'relu{layeridx}')
+        plt.close()
+    go(2)
+    go(1)
 
 def plot_dirs(dirs, legends=None):
     if legends is not None:
@@ -222,12 +247,19 @@ if __name__ == '__main__':
     # plot_dirs(dirs)
     """
 
-    pref = './Hopper-v2-network_64-network_ratio_.5-reward_scaling_'
-    scales =  ['.5', '.75', '1', '5', '10', '30', '100']
+    # pref = './Hopper-v2-network_64-network_ratio_.5-reward_scaling_'
+    # scales =  ['.5', '.75', '1', '5', '10', '30', '100']
+    # dirs = [f'{pref}{x}' for x in scales]
+    # legends = scales
+    # plot_reward(dirs, legends, num=1500000)
+    # plot_saturation(dirs, legends, num=30000)
+
+    pref = './HalfCheetah-v2-network_64-network_ratio_1.-reward_scaling-'
+    scales =  ['.75', '5', '30']
     dirs = [f'{pref}{x}' for x in scales]
     legends = scales
-    plot_reward(dirs, legends, num=3500)
-    # plot_saturation(dirs, legends)
+    plot_reward(dirs, legends, num=1500000)
+    plot_saturation(dirs, legends, num=30000)
 
     # pref = 'Hopper-v2-network_64-network_ratio_.5-lr_'
     # lrs = ['1e-5', '1e-4', '7e-4', '1e-3', '7e-3' ]
