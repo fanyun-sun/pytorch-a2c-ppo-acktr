@@ -39,6 +39,7 @@ class Policy(nn.Module):
 
         self.state_size = self.base.state_size
         self.leaky = args.leaky
+        self.elu = args.elu
         self.scale = 1.
 
     def rescale(self, ratio):
@@ -81,6 +82,9 @@ class Policy(nn.Module):
             x = m(x)
             if self.leaky:
                 if isinstance(m, nn.LeakyReLU):
+                    ret.append(x.clone())
+            elif self.elu:
+                if isinstance(m, nn.ELU):
                     ret.append(x.clone())
             else:
                 if isinstance(m, nn.ReLU):
