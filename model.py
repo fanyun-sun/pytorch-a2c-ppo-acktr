@@ -211,6 +211,23 @@ class MLPBase(nn.Module):
                 nn.LeakyReLU(),
                 init_(nn.Linear(hidden_size,1)),
             )
+        elif args.elu:
+            self.critic1 = nn.Sequential(
+                init_(nn.Linear(num_inputs, hidden_size)),
+                nn.ELU(),
+                init_(nn.Linear(hidden_size, hidden_size)),
+                nn.ELU(),
+                init_(nn.Linear(hidden_size,1)),
+            )
+
+            self.critic2 = nn.Sequential(
+                init_(nn.Linear(num_inputs, hidden_size)),
+                nn.ELU(),
+                init_(nn.Linear(hidden_size, hidden_size)),
+                nn.ELU(),
+                init_(nn.Linear(hidden_size,1)),
+            )
+            
         else:
             self.critic1 = nn.Sequential(
                 init_(nn.Linear(num_inputs, hidden_size)),

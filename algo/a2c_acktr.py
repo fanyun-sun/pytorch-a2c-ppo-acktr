@@ -27,11 +27,16 @@ class A2C_ACKTR(object):
         if acktr:
             self.optimizer = KFACOptimizer(actor_critic)
         else:
+            self.eps = eps
+            self.alpha = alpha
             self.optimizer = optim.RMSprop(
                 actor_critic.parameters(), lr, eps=eps, alpha=alpha)
             # self.optimizer = optim.Adam(
                 # actor_critic.parameters(), lr=lr, eps=eps)
 
+    def reinitialize(self):
+            self.optimizer = optim.RMSprop(
+                self.actor_critic.parameters(), lr, eps=self.eps, alpha=self.alpha)
     def update(self, rollouts):
         obs_shape = rollouts.observations.size()[2:]
         action_shape = rollouts.actions.size()[-1]

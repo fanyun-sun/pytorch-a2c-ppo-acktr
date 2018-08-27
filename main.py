@@ -116,6 +116,17 @@ def main():
     scale = 1.
     current_pdrr = [0., 0.]
     last_update = 0
+
+    ### parameters for adaptive reward scaling ###
+    t_stop = 0
+    beta = .99
+    R_prev = -1e9
+    m_max = -1e9
+    m_t = 0
+    reverse = False
+    ###
+
+
     for j in range(num_updates):
         for step in range(args.num_steps):
             # Sample actions
@@ -159,6 +170,40 @@ def main():
         rollouts.compute_returns(next_value, args.use_gae, args.gamma, args.tau)
 
         value_loss, action_loss, dist_entropy = agent.update(rollouts)
+
+
+        if j % args.adaptive_interval == 0 and j:
+            t = j // args.adaptive_interval
+            R_t = float('{}'.format(final_rewards.mean()))
+            assert type(R_t) == float
+            t_stop += 1
+            m_t = beta * m_t + (1-beta) * R_t
+            m_hat = m_t / (1-beta ** t)
+            print('m_hat :{}, t_stop: {}'.format(m_hat, t_stop))
+            if m_hat > m_max:
+                m_max = m_hat
+                t_stop = 0
+            if t_stop > args.tolerance:
+                if reverse and m_max <= R_prev:
+                    break
+                elif reverse and m_max > R_prev:
+                    actor_critic.rescale(args.cdec)
+                    scale *= args.cdec
+                    agent.reinitialize()
+                elif not reverse and m_max <= R_prev:
+                    actor_critic.rescale(args.cdec)
+                    scale *= args.cdec
+                    agent.reinitialize()
+                    reverse = True
+                else:
+                    actor_critic.rescale(args.cinc)
+                    scale *= args.cinc
+                    agent.reinitialize()
+
+                R_prev = m_max
+                j = t_stop = m_t =  0
+                m_max = -1e9
+            
 
         if j % args.log_interval == 0:
             # this is used for testing saturation

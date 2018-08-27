@@ -20,7 +20,7 @@ markers = ['o', 'v', 's', '^', 'D']
 legend_title = 'learning rate'
 
 
-def plot_reward(dir_names, legends, title=None, num=None, shade=True):
+def plot_reward(dir_names, legends, fname='reward.png', title=None, num=None, shade=True):
 
     sns.color_palette('hls', 10)
     x_label = 'million frames'
@@ -31,70 +31,96 @@ def plot_reward(dir_names, legends, title=None, num=None, shade=True):
     for idx, dir_name in enumerate(dir_names):
         files = glob('{}/*.monitor.csv'.format(dir_name))
 
-        minlen = num
         # if num is not None:
             # minlen = num
         # else:
             # minlen = min([pd.read_csv(f, skiprows=1).shape[0] for f in files])
 
-        print(dir_name, num)
         if shade:
             for f in files:
                 tmpdf =pd.read_csv(f, skiprows=1) 
 
-                x = tmpdf['l'].cumsum().values
-                y = pd.rolling_mean(tmpdf['r'].values, window=100)
+                x = tmpdf['l'].cumsum().values * 16
+                if env == 'Swimmer-v2':
+                    y = pd.rolling_mean(tmpdf['r'].values, window=10)
+                else:
+                    y = pd.rolling_mean(tmpdf['r'].values, window=100)
+
+                if f == files[0]:
+                    print(dir_name, x[-1])
+
 
                 tmpf = interp1d(x, y)
-
                 df = pd.DataFrame()
-                df[x_label] = np.arange(1000, num, 1000)
+
+                lowx = (x[0] + 999)//1000 * 1000
+                print(x[-1])
+                df[x_label] = np.arange(lowx , 9980000, 1000) 
                 df[y_label] = tmpf(df[x_label].values)
+                df[x_label] /= 1e6
+
                 df[hue] = legends[idx]
                 dfss.append(df)
+            
         else:
-            for f in files[:1]:
+            for f in files:
                 tmpdf = pd.read_csv(f, skiprows=1)  
 
                 # df[y_label] = pd.rolling_mean(tmpdf['r'].values[:minlen], window=500)
                 # df[x_label] = tmpdf['l'].cumsum().values[:minlen]
 
                 y = pd.rolling_mean(tmpdf['r'], window=100).values
-                x = tmpdf['l'] = tmpdf['l'].cumsum().values
+                x = tmpdf['l'] = tmpdf['l'].cumsum().values * 16 / 1e6
                 
 
                 if num is not None:
                     x = tmpdf[tmpdf.l < num]['l']
                     y = y[:x.shape[0]]
                 
-                x /= 1000000
                 print(x.shape, y.shape)
                 plt.plot(x, y, label=legends[idx])
 
 
     if shade:
+        if title == 'Walker2d-v2':
+            print(plt.ylim())
+            ymin, ymax = plt.ylim()
+            ax = plt.gca()
+            ax.set_ylim([-1000, 3000])
+            print(plt.ylim())
+        if title == 'HalfCheetah-v2':
+            print(plt.ylim())
+            ymin, ymax = plt.ylim()
+            ax = plt.gca()
+            ax.set_ylim([-1000, 7000])
+            print(plt.ylim())
         df = pd.concat(dfss)
     # df = df.append({x_label:0, y_label:0, hue:'dummy'}, ignore_index=True)
-        g = sns.lineplot(x=x_label, y=y_label, hue=hue, data=df, style=hue)
+        print('plotting...')
+        if env == 'HalfCheetah-v2':
+            g = sns.lineplot(x=x_label, y=y_label, hue=hue, err_kws={'alpha': 0.1}, data=df)
+            ax = plt.gca()
+            box = ax.get_position()
+            ax.set_position([box.x0, box.y0, box.width * 0.8, box.height]) # resize position
+            plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
+        else:
+            g = sns.lineplot(x=x_label, y=y_label, hue=hue, err_kws={'alpha': 0.1}, data=df, legend=False)
+
     # g = sns.lineplot(x=x_label, y=y_label, hue=hue, style=hue, markers=['o', 'v', 's', 'p'], dashes=False, data=df, markevery=100)
     # g = sns.lineplot(x=x_label, y=y_label, hue=hue, style=hue, markers=True, dashes=False, data=df, markevery=100)
 
     else:
         plt.xlabel(x_label)
         plt.ylabel(y_label)
-        plt.gcf().subplots_adjust(bottom=0.15)
 
-    ax = plt.gca()
-    box = ax.get_position()
-    ax.set_position([box.x0, box.y0, box.width * 0.8, box.height]) # resize position
 
+    plt.gcf().subplots_adjust(bottom=0.15)
     if title is not None:
         plt.title(title)
-    plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., title=legend_title)
 
+    # plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., title=legend_title)
     # plt.tight_layout()
-
-    plt.savefig('reward.png')
+    plt.savefig(fname)
 
     plt.close()
 
@@ -109,39 +135,61 @@ def incremental(x):
     return ret
 
 
-def plot_saturation(fnames, legends, title=None, num=None):
-    fnames = ['{}/{}.sat'.format(x, os.path.basename(x)) for x in fnames]
+def plot_saturation(fnames, legends, fname='relu', shade=True, title=None, num=None):
+
+    sns.color_palette('hls', 10)
+    hue = legend_title
     x_label = 'million frames'
     y_label = 'PDRR'
+    fnames = [glob('{}/*.sat'.format(x))[0] for x in fnames]
+
     def go(layeridx):
-        for idx, fname in enumerate(fnames):
-            df = pd.read_csv(fname, header=None)
+
+        dfss = []
+        for idx, f in enumerate(fnames):
+
+            tmpdf =pd.read_csv(f, header=None) 
+
             if layeridx == 2:
-                y = pd.rolling_mean(df.iloc[:, 1] ,window=500)[:num]
-                plt.plot(np.arange(y.shape[0])*10/1e6 * 5, y, label=legends[idx])
+                y = pd.rolling_mean(tmpdf.iloc[:, 1] ,window=100)
+                x = np.arange(y.shape[0]) * 10 * 5 * 16
             else:
-                y = pd.rolling_mean(df.iloc[:, 0] ,window=500)[:num]
-                plt.plot(np.arange(y.shape[0])*10/1e6 * 5, y, label=legends[idx])
+                y = pd.rolling_mean(tmpdf.iloc[:, 0] ,window=100)
+                x = np.arange(y.shape[0]) * 10 * 5 * 16
+                
 
-        if title is not None:
-            plt.title(title)
 
-        plt.xlabel(x_label)
-        plt.ylabel(y_label)
+            tmpf = interp1d(x, y)
+            df = pd.DataFrame()
+
+            lowx = (x[0] + 999)//1000 * 1000
+            print(x[-1])
+            df[x_label] = np.arange(lowx , 9999000, 1000) 
+            df[y_label] = tmpf(df[x_label].values)
+            df[x_label] /= 1e6
+
+            df[hue] = legends[idx]
+            dfss.append(df)
+            
+        df = pd.concat(dfss)
+    # df = df.append({x_label:0, y_label:0, hue:'dummy'}, ignore_index=True)
+        print('plotting ...')
+        g = sns.lineplot(x=x_label, y=y_label, hue=hue, data=df, err_kws={'alpha': 0.1}, legend=False)
+
         plt.gcf().subplots_adjust(bottom=0.15)
+        # ax = plt.gca()
+        # box = ax.get_position()
+        # ax.set_position([box.x0, box.y0, box.width * 0.8, box.height]) # resize position
 
-        ax = plt.gca()
-        box = ax.get_position()
-        ax.set_position([box.x0, box.y0, box.width * 0.8, box.height]) # resize position
+        plt.title(title)
 
-        if title is not None:
-            plt.title(title)
-        plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., title=legend_title)
-
+        # plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., title=legend_title)
+        # plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
         # plt.tight_layout()
-        plt.title('relu-{}'.format(layeridx))
-        plt.savefig(f'relu{layeridx}')
+        plt.savefig('{}-relu{}.png'.format(fname, layeridx))
+
         plt.close()
+
     go(2)
     go(1)
 
@@ -155,53 +203,48 @@ def plot_dirs(dirs, legends=None):
 
 if __name__ == '__main__':
 
-    """ learning rate experiment """
-    pref = '../Hopper-v2/Hopper-v2-network_64-network_ratio_.5-lr_'
-    lrs = ['1e-5_', '1e-4_', '7e-4_', '1e-3_', '7e-3_' ]
-    dirs = ['{}{}'.format(pref, lr)[:-1] for lr in lrs]
-    plot_reward(dirs, lrs, num=1200000) 
-    plot_saturation(dirs, lrs, num=24000)
+    # learning rate experiment
+    """ 
+    legend_title = 'learning rate'
+    dirs = glob('../Hopper-v2/*lr_*')
+    dirs.sort()
+    assert len(dirs) == 5 * 3
+    legends = [x[-4:] for x in dirs]
+    print(legends)
+    plot_reward(dirs, [x + '_' for x in legends], fname='lr.png', title='Hopper-v2')
+    plot_saturation(dirs, [x + '_' for x in legends], fname='lr', title='Hopper-v2')
+    input()
+    # pref = '../Hopper-v2/Hopper-v2-network_64-network_ratio_.5-lr_'
+    # lrs = ['1e-5_', '1e-4_', '7e-4_', '1e-3_', '7e-3_' ]
+    # dirs = ['{}{}'.format(pref, lr)[:-1] for lr in lrs]
+    # plot_reward(dirs, lrs, num=1200000) 
+    # plot_saturation(dirs, lrs, num=24000)
+    """
     
-    # """ reward scalling experiment
-    # Hopper
+    # reward scalling experiment
     """
-    legend_title = 'reward scale'
-    pref = '../Hopper-v2/Hopper-v2-network_64-network_ratio_.5-reward_scaling_'
-    scales =  ['.5', '.75', '1', '5', '10', '30', '100']
-    dirs = [f'{pref}{x}' for x in scales]
-    legends = scales
-    plot_reward(dirs, legends, num=1500000)
-    plot_saturation(dirs, legends, num=30000)
-    """
-    # HalfChetah-v2 
-    """
-    legend_title = 'reward scale'
-    pref = '../HalfCheetah-v2/HalfCheetah-v2-network_64-network_ratio_1.-reward_scaling-'
-    scales =  ['1.', '5', '10', '30', '50', '70']
-    dirs = [f'{pref}{x}' for x in scales]
-    legends = scales
-    plot_reward(dirs, legends, num=1500000)
-    plot_saturation(dirs, legends, num=30000)
-    """
-    # Swimmer-v2
-    """
-    legend_title = 'reward scale'
-    pref = 'Swimmer-v2-network_64-network_ratio_1.-reward_scaling-'
-    scales =  ['1.', '5', '10', '30', '50', '70']
-    dirs = [f'{pref}{x}' for x in scales]
-    legends = scales
-    plot_reward(dirs, legends, num=1500000)
-    plot_saturation(dirs, legends, num=30000)
-    """
-    # Walker2d-v2
-    legend_title = 'reward scale'
-    pref = 'Walker2d-v2-network_64-network_ratio_1.-reward_scaling-'
-    scales =  ['1.', '10', '30', '50']
-    dirs = [f'{pref}{x}' for x in scales]
-    legends = scales
-    plot_reward(dirs, legends, num=1500000, shade=True)
-    plot_saturation(dirs, legends, num=30000)
+    for env in [ 'Swimmer-v2', 'Walker2d-v2', 'Ant-v2', 'HalfCheetah-v2', 'Hopper-v2']:
+        # if env == 'Swimmer-v2' or env == 'Walker2d-v2' or env == 'Ant-v2':
+            # continue
+    # env = 'Ant-v2'
 
+        legend_title = 'reward scale'
+        dirs = glob('../{}/*reward_scaling*'.format(env))
+        dirs.sort()
+        print(len(dirs))
+        # assert len(dirs) == 6 * 3
+        legends = []
+        for d in dirs:
+            if 'seed_1' in d or 'seed_2' in d or 'seed_3' in d:
+                legends.append(d[-9:-7])
+            else:
+                legends.append(d[-2:])
+        legends = [x[1] + '.' if x=='-1' else x for x in legends]
+        print(legends)
+        assert len(set(legends)) == 6
+        plot_reward(dirs, [x+'_' for x in legends], fname='{}-reward_scaling.png'.format(env), title=env)
+        plot_saturation(dirs, [x+'_' for x in legends], fname=env, title=env)
+    """
 
     ## Hopper network size saturation experiment
     # plot_reward(['./Hopper-v2-network_8', '../Hopper-v2/network_16', '../Hopper-v2/network_64', '../Hopper-v2/network_256', 'Hopper-v2-network_8-scale_thresh_.4'], ['network_8', 'network_16', 'network_64', 'network_256', 'network_8-scale_thresh_.2'])
