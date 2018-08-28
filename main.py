@@ -23,8 +23,9 @@ from visualize import visdom_plot
 import algo
 
 from saturation import *
+import pandas as pd
 
-args = get_args()
+arg = get_args()
 
 assert args.algo in ['a2c', 'ppo', 'acktr']
 if args.recurrent_policy:
@@ -124,6 +125,7 @@ def main():
     m_max = -1e9
     m_t = 0
     reverse = False
+    R_ts = []
     ###
 
 
@@ -175,6 +177,7 @@ def main():
         if j % args.adaptive_interval == 0 and j:
             t = j // args.adaptive_interval
             R_t = float('{}'.format(final_rewards.mean()))
+            R_ts.append(R_t)
             assert type(R_t) == float
             t_stop += 1
             m_t = beta * m_t + (1-beta) * R_t
@@ -187,15 +190,18 @@ def main():
                 if reverse and m_max <= R_prev:
                     break
                 elif reverse and m_max > R_prev:
+                    agent.max_grad_norm = .01
                     actor_critic.rescale(args.cdec)
                     scale *= args.cdec
                     agent.reinitialize()
                 elif not reverse and m_max <= R_prev:
+                    agent.max_grad_norm = .01
                     actor_critic.rescale(args.cdec)
                     scale *= args.cdec
                     agent.reinitialize()
                     reverse = True
                 else:
+                    agent.max_grad_norm = .01
                     actor_critic.rescale(args.cinc)
                     scale *= args.cinc
                     agent.reinitialize()
@@ -228,6 +234,7 @@ def main():
                             hasattr(envs, 'ob_rms') and envs.ob_rms or None]
 
             torch.save(save_model, os.path.join(save_path, args.env_name + ".pt"))
+            # torch.save(agent.optimizer, 'optimizer')
 
         assert actor_critic.scale == actor_critic.base.scale == scale
 
@@ -259,6 +266,7 @@ def main():
                        final_rewards.max(), dist_entropy,
                        value_loss, action_loss, scale))
             
+            """
             if j:
                 cterm = 1-.999 ** (j//args.log_interval)
             else:
@@ -271,7 +279,7 @@ def main():
                 scale *= args.reward_ratio
                 # adam_rescaling(args.reward_ratio, agent.optimizer)
                 rmsprop_rescaling(args.reward_ratio, agent.optimizer)
-
+            """
                            
         if args.vis and j % args.vis_interval == 0:
             try:
@@ -280,6 +288,10 @@ def main():
                                   args.algo, args.num_frames)
             except IOError:
                 pass
+    
+    df = pd.DataFrame()
+    df['R_t'] = np.array(R_ts)
+    df.to_csv('{}/R_t.csv'.format(args.log_dir), index=False)
 
 if __name__ == "__main__":
     main()

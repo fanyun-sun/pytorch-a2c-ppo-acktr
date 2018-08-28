@@ -15,8 +15,8 @@ import pandas as pd
 
 from pylab import rcParams
 print(rcParams['figure.figsize'])
-rcParams['figure.figsize'] = 8, 4
-markers = ['o', 'v', 's', '^', 'D']
+# rcParams['figure.figsize'] = 8, 4
+# markers = ['o', 'v', 's', '^', 'D']
 legend_title = 'learning rate'
 
 
@@ -37,11 +37,11 @@ def plot_reward(dir_names, legends, fname='reward.png', title=None, num=None, sh
             # minlen = min([pd.read_csv(f, skiprows=1).shape[0] for f in files])
 
         if shade:
-            for f in files:
+            for f in files[:1]:
                 tmpdf =pd.read_csv(f, skiprows=1) 
 
                 x = tmpdf['l'].cumsum().values * 16
-                if env == 'Swimmer-v2':
+                if 'Swimmer-v2' in title:
                     y = pd.rolling_mean(tmpdf['r'].values, window=10)
                 else:
                     y = pd.rolling_mean(tmpdf['r'].values, window=100)
@@ -53,9 +53,9 @@ def plot_reward(dir_names, legends, fname='reward.png', title=None, num=None, sh
                 tmpf = interp1d(x, y)
                 df = pd.DataFrame()
 
-                lowx = (x[0] + 999)//1000 * 1000
-                print(x[-1])
-                df[x_label] = np.arange(lowx , 9980000, 1000) 
+                interval = 50000
+                lowx = (x[0] + interval - 1)//interval * interval
+                df[x_label] = np.arange(lowx , 9980000, interval) 
                 df[y_label] = tmpf(df[x_label].values)
                 df[x_label] /= 1e6
 
@@ -63,7 +63,7 @@ def plot_reward(dir_names, legends, fname='reward.png', title=None, num=None, sh
                 dfss.append(df)
             
         else:
-            for f in files:
+            for f in files[:1]:
                 tmpdf = pd.read_csv(f, skiprows=1)  
 
                 # df[y_label] = pd.rolling_mean(tmpdf['r'].values[:minlen], window=500)
@@ -82,6 +82,7 @@ def plot_reward(dir_names, legends, fname='reward.png', title=None, num=None, sh
 
 
     if shade:
+        """
         if title == 'Walker2d-v2':
             print(plt.ylim())
             ymin, ymax = plt.ylim()
@@ -94,24 +95,26 @@ def plot_reward(dir_names, legends, fname='reward.png', title=None, num=None, sh
             ax = plt.gca()
             ax.set_ylim([-1000, 7000])
             print(plt.ylim())
+        """
         df = pd.concat(dfss)
-    # df = df.append({x_label:0, y_label:0, hue:'dummy'}, ignore_index=True)
         print('plotting...')
-        if env == 'HalfCheetah-v2':
-            g = sns.lineplot(x=x_label, y=y_label, hue=hue, err_kws={'alpha': 0.1}, data=df)
-            ax = plt.gca()
-            box = ax.get_position()
-            ax.set_position([box.x0, box.y0, box.width * 0.8, box.height]) # resize position
-            plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
-        else:
-            g = sns.lineplot(x=x_label, y=y_label, hue=hue, err_kws={'alpha': 0.1}, data=df, legend=False)
+        g = sns.lineplot(x=x_label, y=y_label, hue=hue, err_kws={'alpha': 0.1}, data=df)
+        ax = plt.gca()
+        # box = ax.get_position()
+        # ax.set_position([box.x0, box.y0, box.width * 0.8, box.height]) # resize position
+        # plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
 
-    # g = sns.lineplot(x=x_label, y=y_label, hue=hue, style=hue, markers=['o', 'v', 's', 'p'], dashes=False, data=df, markevery=100)
-    # g = sns.lineplot(x=x_label, y=y_label, hue=hue, style=hue, markers=True, dashes=False, data=df, markevery=100)
+
+        handles, labels = ax.get_legend_handles_labels()
+        legend =ax.legend(handles=handles[1:], labels=labels[1:], loc=2)
+        plt.setp(legend.get_title(),fontsize='xx-small')
+
+
 
     else:
         plt.xlabel(x_label)
         plt.ylabel(y_label)
+        plt.legend()
 
 
     plt.gcf().subplots_adjust(bottom=0.15)
@@ -121,6 +124,7 @@ def plot_reward(dir_names, legends, fname='reward.png', title=None, num=None, sh
     # plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., title=legend_title)
     # plt.tight_layout()
     plt.savefig(fname)
+
 
     plt.close()
 
@@ -162,9 +166,10 @@ def plot_saturation(fnames, legends, fname='relu', shade=True, title=None, num=N
             tmpf = interp1d(x, y)
             df = pd.DataFrame()
 
-            lowx = (x[0] + 999)//1000 * 1000
+            interval = 50000
+            lowx = (x[0] + interval-1)//interval* interval
             print(x[-1])
-            df[x_label] = np.arange(lowx , 9999000, 1000) 
+            df[x_label] = np.arange(lowx , 9999000, interval) 
             df[y_label] = tmpf(df[x_label].values)
             df[x_label] /= 1e6
 
@@ -174,7 +179,7 @@ def plot_saturation(fnames, legends, fname='relu', shade=True, title=None, num=N
         df = pd.concat(dfss)
     # df = df.append({x_label:0, y_label:0, hue:'dummy'}, ignore_index=True)
         print('plotting ...')
-        g = sns.lineplot(x=x_label, y=y_label, hue=hue, data=df, err_kws={'alpha': 0.1}, legend=False)
+        g = sns.lineplot(x=x_label, y=y_label, hue=hue, data=df, err_kws={'alpha': 0.1})
 
         plt.gcf().subplots_adjust(bottom=0.15)
         # ax = plt.gca()
@@ -182,6 +187,10 @@ def plot_saturation(fnames, legends, fname='relu', shade=True, title=None, num=N
         # ax.set_position([box.x0, box.y0, box.width * 0.8, box.height]) # resize position
 
         plt.title(title)
+
+        ax = plt.gca()
+        handles, labels = ax.get_legend_handles_labels()
+        legend =ax.legend(handles=handles[1:], labels=labels[1:], loc=2)
 
         # plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., title=legend_title)
         # plt.legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
@@ -203,33 +212,81 @@ def plot_dirs(dirs, legends=None):
 
 if __name__ == '__main__':
 
+    # leaky, elu experiment
+    """
+    title = 'Hopper-v2 (A2C)'
+    legend_title = 'activation'
+    pref = '../Hopper-v2/Hopper-v2-network_64-network_ratio_.5-reward_scaling-'
+    for scale in ['.5', '1.', '10' ,'30', '50', '70']:
+        if scale == '1.':
+            dirs = glob(pref + scale + '*') +  glob(pref + scale[0] + '-' + '*')
+        else:
+            dirs = glob(pref + scale + '*')
+
+        dirs.sort()
+        legends = []
+        for d in dirs:
+            if 'leaky' in d:
+                legends.append('leaky-relu')
+            elif 'elu' in d:
+                legends.append('elu')
+            else:
+                legends.append('relu')
+
+        print(legends)
+        assert len(legends) == 9
+        plot_reward(dirs, legends, title=title, fname='Hopper-v2-scale-{}.png'.format(scale))
+
+    dirs = []
+    for scale in ['.5', '50']:
+        dirs += glob(pref + scale + '*')
+
+    dirs.sort()
+    legends = []
+    for d in dirs:
+        if 'leaky' in d:
+            leg = 'leaky-relu'
+        elif 'elu' in d:
+            leg = 'elu'
+        else:
+            leg = 'relu'
+
+        if '50' in d:
+            leg += ' (50)'
+        else:
+            leg += ' (.5)'
+        legends.append(leg)
+
+
+    print(legends)
+    assert len(legends) == 18
+
+    # title = '{}(reward scaling {})'.format('Hopper-v2', scale)
+    plot_reward(dirs, legends, title=title, fname='activation-.5-50.png')
+    """
+
     # learning rate experiment
-    """ 
-    legend_title = 'learning rate'
-    dirs = glob('../Hopper-v2/*lr_*')
+    """
+    legend_title = 'lr'
+    dirs = glob('../Hopper-v2/lr_exp/*lr_*')
     dirs.sort()
     assert len(dirs) == 5 * 3
     legends = [x[-4:] for x in dirs]
     print(legends)
     plot_reward(dirs, [x + '_' for x in legends], fname='lr.png', title='Hopper-v2')
     plot_saturation(dirs, [x + '_' for x in legends], fname='lr', title='Hopper-v2')
-    input()
-    # pref = '../Hopper-v2/Hopper-v2-network_64-network_ratio_.5-lr_'
-    # lrs = ['1e-5_', '1e-4_', '7e-4_', '1e-3_', '7e-3_' ]
-    # dirs = ['{}{}'.format(pref, lr)[:-1] for lr in lrs]
-    # plot_reward(dirs, lrs, num=1200000) 
-    # plot_saturation(dirs, lrs, num=24000)
     """
     
     # reward scalling experiment
-    """
-    for env in [ 'Swimmer-v2', 'Walker2d-v2', 'Ant-v2', 'HalfCheetah-v2', 'Hopper-v2']:
+    for env in [ 'Hopper-v2', 'Walker2d-v2', 'Ant-v2', 'Walker2d-v2', 'HalfCHeetah-v2']:
         # if env == 'Swimmer-v2' or env == 'Walker2d-v2' or env == 'Ant-v2':
             # continue
     # env = 'Ant-v2'
 
         legend_title = 'reward scale'
-        dirs = glob('../{}/*reward_scaling*'.format(env))
+        dirs = glob('../{}/*network_ratio_.5*reward_scaling*'.format(env))
+        dirs = [d for d in dirs if 'elu' not in d and 'leaky' not in d]
+        print(dirs)
         dirs.sort()
         print(len(dirs))
         # assert len(dirs) == 6 * 3
@@ -242,9 +299,11 @@ if __name__ == '__main__':
         legends = [x[1] + '.' if x=='-1' else x for x in legends]
         print(legends)
         assert len(set(legends)) == 6
-        plot_reward(dirs, [x+'_' for x in legends], fname='{}-reward_scaling.png'.format(env), title=env)
+        # plot_reward(dirs, [x+'_' for x in legends], fname='{}-reward_scaling.png'.format(env), title=env)
         plot_saturation(dirs, [x+'_' for x in legends], fname=env, title=env)
-    """
+
+
+
 
     ## Hopper network size saturation experiment
     # plot_reward(['./Hopper-v2-network_8', '../Hopper-v2/network_16', '../Hopper-v2/network_64', '../Hopper-v2/network_256', 'Hopper-v2-network_8-scale_thresh_.4'], ['network_8', 'network_16', 'network_64', 'network_256', 'network_8-scale_thresh_.2'])

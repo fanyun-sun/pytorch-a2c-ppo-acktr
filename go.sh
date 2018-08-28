@@ -3,15 +3,20 @@
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/willy/.mujoco/mjpro150/bin
 
 env=$1
+
 network_size=64
 scale_interval=1000000000000000
 scale_threshold=2.
 network_ratio=1.
 
-rew=$2
-seed=$3
+adaptive_interval=100
+cdec=.9
+cinc=8
 
-dir=$env-network_$network_size-network_ratio_$network_ratio-adaptive
+tolerance=$2
+
+
+dir=$env-network_$network_size-network_ratio_$network_ratio-adaptive-$adaptive_interval-$cdec-$dinc-$tolerance
 
 python main.py --env-name "$env"  \
                --num-stack 1  \
@@ -21,4 +26,9 @@ python main.py --env-name "$env"  \
                --scale-threshold $scale_threshold \
                --plot-title  $dir \
                --saturation-log $dir/$dir.sat \
-               --network-ratio $network_ratio --adaptive-interval 100 --cdec .95 --cinc 4 --tolerance 60 --log-interval 1000
+               --network-ratio $network_ratio \
+               --adaptive-interval $adaptive_interval \
+               --cdec $cdec \
+               --cinc $cinc \
+               --tolerance $tolerance \
+               --log-interval 1000
