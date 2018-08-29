@@ -10,9 +10,8 @@ scale_threshold=2.
 network_ratio=1.
 
 adaptive_interval=1000000000000000000
-lr=$2
 
-dir=$env-network_$network_size-network_ratio_$network_ratio-pop_art-lr_$lr
+dir=$env-network_$network_size-network_ratio_$network_ratio-pop_art
 
 python main.py --env-name "$env"  \
                --num-stack 1  \
@@ -24,4 +23,4 @@ python main.py --env-name "$env"  \
                --saturation-log $dir/$dir.sat \
                --network-ratio $network_ratio \
                --adaptive-interval $adaptive_interval \
-               --log-interval 1000 --pop-art --lr $lr
+               --log-interval 1000 --pop-art 

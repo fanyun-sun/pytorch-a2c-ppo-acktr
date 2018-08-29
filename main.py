@@ -26,6 +26,7 @@ from saturation import *
 import pandas as pd
 
 args = get_args()
+R_ts = []
 
 assert args.algo in ['a2c', 'ppo', 'acktr']
 if args.recurrent_policy:
@@ -126,7 +127,8 @@ def main():
     m_max = -1e9
     m_t = 0
     reverse = False
-    R_ts = []
+
+    last_scale_t = -1e9
     ###
 
 
@@ -175,11 +177,16 @@ def main():
         if args.pop_art:
             value_loss, action_loss, dist_entropy = agent.pop_art_update(rollouts)
         else:
-            value_loss, action_loss, dist_entropy = agent.update(rollouts)
-
-
-        if j % args.adaptive_interval == 0 and j:
             t = j // args.adaptive_interval
+            if t - last_scale_t > 50:
+                value_loss, action_loss, dist_entropy = agent.update(rollouts, update_actor=True)
+            else:
+                value_loss, action_loss, dist_entropy = agent.update(rollouts, update_actor=False)
+
+
+        if j % args.adaptive_interval == 0 and j and t - last_scale_t > 50:
+            t = j // args.adaptive_interval
+
             R_t = float('{}'.format(final_rewards.mean()))
             R_ts.append(R_t)
             assert type(R_t) == float
@@ -198,17 +205,20 @@ def main():
                     actor_critic.rescale(args.cdec)
                     scale *= args.cdec
                     agent.reinitialize()
+                    last_scale_t = t
                 elif not reverse and m_max <= R_prev:
                     agent.max_grad_norm = args.max_grad_norm_after
                     actor_critic.rescale(args.cdec)
                     scale *= args.cdec
                     agent.reinitialize()
                     reverse = True
+                    last_scale_t = t
                 else:
                     agent.max_grad_norm = args.max_grad_norm_after
                     actor_critic.rescale(args.cinc)
                     scale *= args.cinc
                     agent.reinitialize()
+                    last_scale_t = t
 
                 R_prev = m_max
                 j = t_stop = m_t =  0
@@ -242,12 +252,14 @@ def main():
 
         assert actor_critic.scale == actor_critic.base.scale == scale
 
+        """
         if  j % args.scale_interval == 0 and j and args.scale_threshold > 1.:
             actor_critic.rescale(args.reward_ratio)
             scale *= args.reward_ratio
             # adam_rescaling(args.reward_ratio, agent.optimizer)
             rmsprop_rescaling(args.reward_ratio, agent.optimizer)
 
+        """
         if j % args.log_interval == 0:
             end = time.time()
             total_num_steps = (j + 1) * args.num_processes * args.num_steps
@@ -293,10 +305,17 @@ def main():
             except IOError:
                 pass
     
-    print('here')
-    df = pd.DataFrame()
-    df['R_t'] = np.array(R_ts)
-    df.to_csv('{}/R_t.csv'.format(args.log_dir), index=False)
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print('Interrupted')
+        try:
+            print('here')
+            df = pd.DataFrame()
+            df['R_t'] = np.array(R_ts)
+            df.to_csv('{}/R_t.csv'.format(args.log_dir), index=False)
+            sys.exit(0)
+        except SystemExit:
+            os._exit(0)

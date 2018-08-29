@@ -34,12 +34,12 @@ class A2C_ACKTR(object):
             self.eps = eps
             self.alpha = alpha
             self.lr = lr
-            if self.pop_art:
-                self.optimizer = optim.SGD(
-                    actor_critic.parameters(), lr)
-            else:
-                self.optimizer = optim.RMSprop(
-                    actor_critic.parameters(), lr, eps=eps, alpha=alpha)
+            # if self.pop_art:
+                # self.optimizer = optim.SGD(
+                    # actor_critic.parameters(), lr)
+            # else:
+            self.optimizer = optim.RMSprop(
+                actor_critic.parameters(), lr, eps=eps, alpha=alpha)
             # self.optimizer = optim.Adam(
                 # actor_critic.parameters(), lr=lr, eps=eps)
 
@@ -143,7 +143,7 @@ class A2C_ACKTR(object):
 
         return avg_delta.item(), action_loss.item(), dist_entropy.item()
 
-    def update(self, rollouts):
+    def update(self, rollouts, update_actor):
         obs_shape = rollouts.observations.size()[2:]
         action_shape = rollouts.actions.size()[-1]
         num_steps, num_processes, _ = rollouts.rewards.size()
@@ -181,8 +181,11 @@ class A2C_ACKTR(object):
             self.optimizer.acc_stats = False
         """
         self.optimizer.zero_grad()
-        (value_loss * self.value_loss_coef + action_loss -
-         dist_entropy * self.entropy_coef).backward()
+        if update_actor:
+            (value_loss * self.value_loss_coef + action_loss -
+             dist_entropy * self.entropy_coef).backward()
+        else:
+            (value_loss * self.value_loss_coef).backward()
 
         if self.acktr == False:
             nn.utils.clip_grad_norm_(self.actor_critic.parameters(),
