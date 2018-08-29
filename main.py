@@ -25,7 +25,7 @@ import algo
 from saturation import *
 import pandas as pd
 
-arg = get_args()
+args = get_args()
 
 assert args.algo in ['a2c', 'ppo', 'acktr']
 if args.recurrent_policy:
@@ -87,7 +87,8 @@ def main():
         agent = algo.A2C_ACKTR(actor_critic, args.value_loss_coef,
                                args.entropy_coef, lr=args.lr,
                                eps=args.eps, alpha=args.alpha,
-                               max_grad_norm=args.max_grad_norm)
+                               max_grad_norm=args.max_grad_norm,
+                               pop_art=args.pop_art)
     elif args.algo == 'ppo':
         agent = algo.PPO(actor_critic, args.clip_param, args.ppo_epoch, args.num_mini_batch,
                          args.value_loss_coef, args.entropy_coef, lr=args.lr,
@@ -171,7 +172,10 @@ def main():
 
         rollouts.compute_returns(next_value, args.use_gae, args.gamma, args.tau)
 
-        value_loss, action_loss, dist_entropy = agent.update(rollouts)
+        if args.pop_art:
+            value_loss, action_loss, dist_entropy = agent.pop_art_update(rollouts)
+        else:
+            value_loss, action_loss, dist_entropy = agent.update(rollouts)
 
 
         if j % args.adaptive_interval == 0 and j:
@@ -190,18 +194,18 @@ def main():
                 if reverse and m_max <= R_prev:
                     break
                 elif reverse and m_max > R_prev:
-                    agent.max_grad_norm = .01
+                    agent.max_grad_norm = args.max_grad_norm_after
                     actor_critic.rescale(args.cdec)
                     scale *= args.cdec
                     agent.reinitialize()
                 elif not reverse and m_max <= R_prev:
-                    agent.max_grad_norm = .01
+                    agent.max_grad_norm = args.max_grad_norm_after
                     actor_critic.rescale(args.cdec)
                     scale *= args.cdec
                     agent.reinitialize()
                     reverse = True
                 else:
-                    agent.max_grad_norm = .01
+                    agent.max_grad_norm = args.max_grad_norm_after
                     actor_critic.rescale(args.cinc)
                     scale *= args.cinc
                     agent.reinitialize()
@@ -289,6 +293,7 @@ def main():
             except IOError:
                 pass
     
+    print('here')
     df = pd.DataFrame()
     df['R_t'] = np.array(R_ts)
     df.to_csv('{}/R_t.csv'.format(args.log_dir), index=False)

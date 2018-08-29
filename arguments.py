@@ -24,16 +24,20 @@ def get_args():
                         help='whether to use leaky relu instead of relu')
     parser.add_argument('--elu', action='store_true', default=False,
                         help='whether to use elu instead')
-
     parser.add_argument('--network-ratio', type=float, default=.1,
                         help='weight for the dynamic scaling network')
     parser.add_argument('--reward-ratio', type=float, default=.95,
                         help='scaling gratio')
-    parser.add_argument('--adaptive-interval', type=int, default=100, help='interval for adaptive reward scaling')
+    parser.add_argument('--adaptive-interval', type=int, default=100,
+                        help='interval for adaptive reward scaling')
     parser.add_argument('--tolerance', type=int, default=60,
                         help='tolerance for adaptive reward scaling')
     parser.add_argument('--cinc', type=float, default=4., help='')
     parser.add_argument('--cdec', type=float, default=.95, help='')
+    parser.add_argument('--max-grad-norm-after', type=float, default=0.5,
+                        help='max norm of gradients after scaling(default: 0.5)')
+    parser.add_argument('--pop-art', action='store_true', default=False,
+                        help='whether to use pop-art')
 
     parser.add_argument('--lr', type=float, default=7e-4,
                         help='learning rate (default: 7e-4)')
@@ -73,7 +77,7 @@ def get_args():
                         help='save interval, one save per n updates (default: 10)')
     parser.add_argument('--vis-interval', type=int, default=100,
                         help='vis interval, one log per n updates (default: 100)')
-    parser.add_argument('--num-frames', type=int, default=10e6,
+    parser.add_argument('--num-frames', type=int, default=5 * 10e6,
                         help='number of frames to train (default: 10e6)')
     parser.add_argument('--env-name', default='PongNoFrameskip-v4',
                         help='environment to train on (default: PongNoFrameskip-v4)')

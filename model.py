@@ -192,6 +192,7 @@ class MLPBase(nn.Module):
             nn.Tanh()
         )
 
+
         # self.linear1 = init_(nn.Linear(num_inputs, 64))
         # self.linear2 = init_(nn.Linear(64, 64))
         # self.linear3 = init_(nn.Linear(64, 1))

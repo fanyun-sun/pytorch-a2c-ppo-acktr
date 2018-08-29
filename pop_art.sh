@@ -9,14 +9,10 @@ scale_interval=1000000000000000
 scale_threshold=2.
 network_ratio=1.
 
-adaptive_interval=1000
-cdec=.9
-cinc=8
+adaptive_interval=1000000000000000000
+lr=$2
 
-tolerance=$2
-max=.01
-
-dir=$env-network_$network_size-network_ratio_$network_ratio-adaptive-$adaptive_interval-$cdec-$cinc-$tolerance-$max
+dir=$env-network_$network_size-network_ratio_$network_ratio-pop_art-lr_$lr
 
 python main.py --env-name "$env"  \
                --num-stack 1  \
@@ -28,7 +24,4 @@ python main.py --env-name "$env"  \
                --saturation-log $dir/$dir.sat \
                --network-ratio $network_ratio \
                --adaptive-interval $adaptive_interval \
-               --cdec $cdec \
-               --cinc $cinc \
-               --tolerance $tolerance \
-               --log-interval 1000 --max-grad-norm-after $max
+               --log-interval 1000 --pop-art --lr $lr

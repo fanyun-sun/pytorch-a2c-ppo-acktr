@@ -70,14 +70,21 @@ def plot_reward(dir_names, legends, fname='reward.png', title=None, num=None, sh
                 # df[x_label] = tmpdf['l'].cumsum().values[:minlen]
 
                 y = pd.rolling_mean(tmpdf['r'], window=100).values
-                x = tmpdf['l'] = tmpdf['l'].cumsum().values * 16 / 1e6
+                x = tmpdf['l'] = tmpdf['l'].cumsum().values * 16
                 
+                if f == files[0]:
+                    print(dir_name, x[-1])
 
-                if num is not None:
-                    x = tmpdf[tmpdf.l < num]['l']
-                    y = y[:x.shape[0]]
-                
-                print(x.shape, y.shape)
+                tmpf = interp1d(x, y)
+
+                interval = 50000
+                lowx = (x[0] + interval - 1)//interval * interval
+
+                x = np.arange(lowx , min(x[-1], 9980000), interval) 
+                x = x.astype(np.float32)
+                y = tmpf(x)
+                x /= 1e6
+
                 plt.plot(x, y, label=legends[idx])
 
 
@@ -278,6 +285,7 @@ if __name__ == '__main__':
     """
     
     # reward scalling experiment
+    """
     for env in [ 'Hopper-v2', 'Walker2d-v2', 'Ant-v2', 'Walker2d-v2', 'HalfCHeetah-v2']:
         # if env == 'Swimmer-v2' or env == 'Walker2d-v2' or env == 'Ant-v2':
             # continue
@@ -299,113 +307,32 @@ if __name__ == '__main__':
         legends = [x[1] + '.' if x=='-1' else x for x in legends]
         print(legends)
         assert len(set(legends)) == 6
-        # plot_reward(dirs, [x+'_' for x in legends], fname='{}-reward_scaling.png'.format(env), title=env)
+        plot_reward(dirs, [x+'_' for x in legends], fname='{}-reward_scaling.png'.format(env), title=env)
         plot_saturation(dirs, [x+'_' for x in legends], fname=env, title=env)
-
-
-
-
-    ## Hopper network size saturation experiment
-    # plot_reward(['./Hopper-v2-network_8', '../Hopper-v2/network_16', '../Hopper-v2/network_64', '../Hopper-v2/network_256', 'Hopper-v2-network_8-scale_thresh_.4'], ['network_8', 'network_16', 'network_64', 'network_256', 'network_8-scale_thresh_.2'])
-    # plot_saturation(['../Hopper-v2/network_16/network_16.sat', '../Hopper-v2/network_64/network_64.sat', '../Hopper-v2/network_256/network_256.sat'], ['network_16', 'network_64', 'network_256'])
-
-    # Hopper small network v.s. out method
-    # plot_reward(['./Hopper-v2-network_8', 'Hopper-v2-network_8-scale_thresh_.4'], ['network_8', 'network_8-scale_thresh_.2'])
-    # plot_saturation(['./Hopper-v2-network_8.sat', 'Hopper-v2-network_8-scale_thresh_.4.sat'], ['network_8', 'network_8-scale_thresh_.2'])
-
-    # Hopper, with v.s. without gradient clipping
-    # plot_reward(['../Hopper-v2/Hopper-v2-scale-5000', 'grad_clipping', '../Hopper-v2/grad_clipping', '../Hopper-v2/network_64'], ['scale', 'scale+clipping', 'grad clipping', 'original'], 2300)
-
-    # HalfCheetah, with v.s. without gradient clipping
-    # plot_directory('../HalfCheetah-v2')
-    # plot_reward(['grad_clipping-scale_20000-HalfCheetah-v2','../HalfCheetah-v2/grad_clipping', '../HalfCheetah-v2/original', '../HalfCheetah-v2/scale_20000'], ['clipping+scaling', 'grad_clipping', 'original', 'scale_20000'], 1600)
-    # plot_saturation(['grad_clipping1.sat', '../HalfCheetah-v2/original/original.sat', '../HalfCheetah-v2/scale_20000/scale_20000.sat'], ['grad_clipping', 'original', 'scale_20000'])
-
-    # Hopper, different reward scaling(no other tricks used)
-    """
-    name = '../Hopper-v2/Hopper-v2-rewrard_scale-'
-    scales = ['.5', '1', '5', '10']
-    plot_reward(['{}{}'.format(name, s) for s in scales], ['reward_scale-{}'.format(x) for x in scales])
-    tmp = 'Hopper-v2-rewrard_scale-'
-    plot_saturation(['{}{}/{}{}.sat'.format(name, s, tmp, s) for s in scales], ['reward_scale-{}'.format(x) for x in scales])
-    """
-    # plot_directory('../Hopper-v2')
-    # dirs = ['Hopper-v2-network_64-scale_thresh_.2', '../Hopper-v2/network_64']
-    # plot_reward(dirs, dirs, 'Hopper-v2')
-    # plot_reward(dirs, [os.path.basename(d) for d in dirs], num=6000)
-    # sat = ['{}/{}.sat'.format(x, os.path.basename(x)) for x in dirs]
-    # plot_saturation(sat, [os.path.basename(d) for d in dirs], num=20000)
-
-    # x = ['HalfCheetah-v2-network_8-scale_thresh_.2', 'HalfCheetah-v2-network_8', '../HalfCheetah-v2/HalfCheetah-v2-network_8-scale_thresh_.2-single', 'HalfCheetah-v2-network_64-scale_thresh_.4']
-    # dirs = ['../HalfCheetah-v2/HalfCheetah-v2-network_64-scale_thresh_.2', '../HalfCheetah-v2/original', 'HalfCheetah-v2-network_64-scale_thresh_.4', '../HalfCheetah-v2/scale_20000']
-    """
-    dirs = ['HalfCheetah-v2-network_8-scale_thresh_.2-20000', 'HalfCheetah-v2-network_8-scale_thresh_.4-20000', '../HalfCheetah-v2/HalfCheetah-v2-network_8']
-
-    plot_reward(dirs, dirs, title='HalfCheetah-v2')
-    sat = ['{}/{}.sat'.format(x, os.path.basename(x)) for x in dirs]
-    sat[-2] = 'HalfCheetah-v2-network_64-scale_thresh_.4.sat'
-    plot_saturation(sat, [os.path.basename(x) for x in dirs], title='HalfCheetah-v2')
     """
 
-    # x = ['../Ant-v2/Ant-v2-network_8', '../Ant-v2/Ant-v2-network_8-scale_thresh_.2', 'Ant-v2-network_64-scale_thresh_.2']
-    # plot_reward(x, x)
+    # our method
+    dirs = glob('Swimmer*') + ['../Swimmer-v2/Swimmer-v2-network_64-network_ratio_1.-reward_scaling-1.']
+    legends = [d[-10:] for d in dirs]
+    legends[-1] = 'original'
+    plot_reward(dirs, legends, fname='Swimmer-v2', shade=False)
 
-    # plot_saturation([xx + '.sat' for xx in x], x)
+    dirs = glob('Walker2d*') + ['../Walker2d-v2/Walker2d-v2-network_64-network_ratio_1.-reward_scaling-1.']
+    legends = [d[-10:] for d in dirs]
+    legends[-1] = 'original'
+    plot_reward(dirs, legends, num=1000, shade=False, fname='Walker2d-v2')
 
-    # x = ['../Humanoid-v2/Humanoid-v2-network_8', '../Humanoid-v2/Humanoid-v2-network_8-scale_thresh_.2']
-    # plot_reward(x, x)
-    # plot_saturation(['{}/{}.sat'.format(xx, os.path.basename(xx)) for xx in x], x)
+    dirs = glob('Hopper-v2*') + ['../Hopper-v2/Hopper-v2-network_64-network_ratio_1.-reward_scaling-1-seed_1']
+    legends = [d[-10:] for d in dirs]
+    legends[-1] = 'original'
+    plot_reward(dirs, legends, num=1000, shade=False, fname='Hopper-v2')
 
-    # PPO
-    # plot_directory('../../ppo/Hopper-v2')
+    dirs = glob('HalfCheetah-v2*') + ['../HalfCheetah-v2/HalfCheetah-v2-network_64-network_ratio_1.-reward_scaling-1.']
+    legends = [d[-10:] for d in dirs]
+    legends[-1] = 'original'
+    plot_reward(dirs, legends, num=1000, shade=False, fname='HalfCheetah=v2')
 
-    # Walker
-    # plot_directory('../Walker-2d-v2')
-    # plot_dirs(glob('HalfCheetah-v2-network_64*') + ['../HalfCheetah-v2/grad_clipping'])
-    # plot_dirs(glob('../Hopper-v2/Hopper-v2-rewrard_scale*'))
-    # dirs = glob('Hopper-v2-*')
-    # for f in glob('Hopper-v2*lr*'):
-        # dirs.remove(f)
-
-    # dirs = glob('*reward*')
-    # dirs += ['../Hopper-v2/network_64', '../Hopper-v2/Hopper-v2-network_64-scale_thresh_.2']
-
-    # plot_dirs(dirs)
-
-    # plot_dirs(glob('Hopper-v2-network_64*') + ['../Hopper-v2/network_64'], None)
-
-    # plot_dirs(glob('HalfCheetah-v2-network_64*'))
-
-    # dirs = ['./Hopper-v2-network_64-network_ratio_.5-reward_scaling_1', 'Hopper-v2-network_64-network_ratio_1.-adam', './Hopper-v2-network_64-network_ratio_.1-rmsprop_rescaling', '../Hopper-v2/Hoper-network_6']
-    # legends = ['rmsprop', 'adam', 'rmsprop scaling']
-    # plot_reward(dirs,legends, title='Hopper-v2', num=None)
-    # plot_saturation(dirs, legends)
-    #plot_dirs(glob('../Swimmer-v2/*'))
-    # dirs = ['Hopper-v2-network_64-network_ratio_.5-reward_scaling_1']+glob('Hopper-v2-network_64-network_ratio_.5-lr*')
-
-    # legends = ['lr 4e-7', 'lr '+ dirs[1][-4:], 'lr ' + dirs[2][-4:]]
-    # legends = [x[-4:] for x in dirs]
-
-    # plot_reward(dirs, legends)
-    # plot_saturation(dirs, legends)
-    """
-    # dirs =glob('Hopper-v2-network_8*')
-    # dirs.remove('Hopper-v2-network_8-network_ratio_.5-reward_scaling_.25')
-    # dirs.remove('Hopper-v2-network_8-network_ratio_.5-reward_scaling_.5')
-    # dirs.remove('Hopper-v2-network_8-network_ratio_.5-reward_scaling_.25')
-    # plot_dirs(dirs)
-    """
-
-
-    # pref = './HalfCheetah-v2-network_64-network_ratio_1.-reward_scaling-'
-    # scales =  ['.75', '5', '30']
-    # dirs = [f'{pref}{x}' for x in scales]
-    # legends = scales
-    # plot_reward(dirs, legends, num=1500000)
-    # plot_saturation(dirs, legends, num=30000)
-
-
-    # dirs = ['Hopper-v2-network_64-network_ratio_.1-scaling_leaky', 'Hopper-v2-network_64-network_ratio_.1-rmsprop_rescaling', 'Hopper-v2-network_64-weight_.1']
-    # legends = ['leaky + out method', 'our method', 'original']
-    # plot_reward(dirs, legends)
-
+    dirs = glob('Ant-v2*') + ['../Ant-v2/Ant-v2-network_64-network_ratio_1.-reward_scaling-1']
+    legends = [d[-10:] for d in dirs]
+    legends[-1] = 'original'
+    plot_reward(dirs, legends, num=1000, shade=False, fname='Ant-v2')
