@@ -174,17 +174,17 @@ def main():
 
         rollouts.compute_returns(next_value, args.use_gae, args.gamma, args.tau)
 
+        t = j // args.adaptive_interval
         if args.pop_art:
             value_loss, action_loss, dist_entropy = agent.pop_art_update(rollouts)
         else:
-            t = j // args.adaptive_interval
-            if t - last_scale_t > 50:
+            if t - last_scale_t > 100:
                 value_loss, action_loss, dist_entropy = agent.update(rollouts, update_actor=True)
             else:
                 value_loss, action_loss, dist_entropy = agent.update(rollouts, update_actor=False)
 
 
-        if j % args.adaptive_interval == 0 and j and t - last_scale_t > 50:
+        if j > 100000 and j >= j % args.adaptive_interval == 0 and j and t - last_scale_t > 100:
             t = j // args.adaptive_interval
 
             R_t = float('{}'.format(final_rewards.mean()))
@@ -232,6 +232,7 @@ def main():
 
         rollouts.after_update()
 
+        """
         if j % args.save_interval == 0 and args.save_dir != "":
             save_path = os.path.join(args.save_dir, args.algo)
             try:
@@ -250,6 +251,7 @@ def main():
             torch.save(save_model, os.path.join(save_path, args.env_name + ".pt"))
             # torch.save(agent.optimizer, 'optimizer')
 
+        """
         assert actor_critic.scale == actor_critic.base.scale == scale
 
         """

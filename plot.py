@@ -41,10 +41,12 @@ def plot_reward(dir_names, legends, fname='reward.png', title=None, num=None, sh
                 tmpdf =pd.read_csv(f, skiprows=1) 
 
                 x = tmpdf['l'].cumsum().values * 16
-                if 'Swimmer-v2' in title:
-                    y = pd.rolling_mean(tmpdf['r'].values, window=10)
-                else:
-                    y = pd.rolling_mean(tmpdf['r'].values, window=100)
+                if x[-1] <= 9980000:
+                    continue
+                # if 'Swimmer-v2' in title:
+                    # y = pd.rolling_mean(tmpdf['r'].values, window=10)
+                # else:
+                y = pd.rolling_mean(tmpdf['r'].values, window=100)
 
                 if f == files[0]:
                     print(dir_name, x[-1])
@@ -70,20 +72,20 @@ def plot_reward(dir_names, legends, fname='reward.png', title=None, num=None, sh
                 # df[x_label] = tmpdf['l'].cumsum().values[:minlen]
 
                 y = pd.rolling_mean(tmpdf['r'], window=100).values
-                x = tmpdf['l'] = tmpdf['l'].cumsum().values * 16
+                x = tmpdf['l'] = tmpdf['l'].cumsum().values * 16 / 1000000
                 
                 if f == files[0]:
                     print(dir_name, x[-1])
 
-                tmpf = interp1d(x, y)
+                # tmpf = interp1d(x, y)
 
-                interval = 50000
-                lowx = (x[0] + interval - 1)//interval * interval
+                # interval = 50000
+                # lowx = (x[0] + interval - 1)//interval * interval
 
-                x = np.arange(lowx , min(x[-1], 9980000), interval) 
-                x = x.astype(np.float32)
-                y = tmpf(x)
-                x /= 1e6
+                # x = np.arange(lowx , min(x[-1], 9980000), interval) 
+                # x = x.astype(np.float32)
+                # y = tmpf(x)
+                # x /= 1e6
 
                 plt.plot(x, y, label=legends[idx])
 
@@ -136,15 +138,31 @@ def plot_reward(dir_names, legends, fname='reward.png', title=None, num=None, sh
     plt.close()
 
 def incremental(x):
-    print(x)
-    beta = .9
+    beta = .99
     ret = np.zeros(len(x))
-    ret[0] = x[0]
-    for i in range(1, ret.shape[0]):
-            ret[i] = (beta * ret[i-1] + (1-beta) * x[i]) / (1-beta ** i)
-    print(ret)
+    last_value = 0.
+    for i in range(ret.shape[0]):
+        last_value = (beta * last_value)  + (1-beta) * x[i]
+        ret[i] = last_value / (1-beta ** (i+1) )
+
     return ret
 
+def get_perf(dirs):
+    frames = 10000000
+    for d in dirs:
+        files = glob('{}/*.monitor.csv'.format(d))
+        res = []
+        for f in files:
+            tmpdf =pd.read_csv(f, skiprows=1) 
+            x = tmpdf['l'].cumsum().values * 16
+            y = incremental(tmpdf['r'].values)
+            idx = np.argmax(x >= frames)
+            # print(x[-1])
+            if idx:
+                x, y = x[:idx], y[:idx]
+            res.append(np.max(y))
+        print(d, idx)
+        print('##############\n', np.mean(res), '\n################')
 
 def plot_saturation(fnames, legends, fname='relu', shade=True, title=None, num=None):
 
@@ -312,27 +330,40 @@ if __name__ == '__main__':
     """
 
     # our method
-    dirs = glob('Swimmer*') + ['../Swimmer-v2/Swimmer-v2-network_64-network_ratio_1.-reward_scaling-1.']
-    legends = [d[-10:] for d in dirs]
-    legends[-1] = 'original'
-    plot_reward(dirs, legends, fname='Swimmer-v2', shade=False)
+    dirs = glob('Swimmer*') + glob('../Swimmer-v2/Swimmer-v2-network_64-network_ratio_1.-reward_scaling-1*') + glob('../pop_art/Swimmer-v2*')
+    # get_perf(dirs)
+    # legends = [d[-10:] for d in dirs]
+    # legends[-4] = 'original'
+    # legends[-3:] = ['pop_art']*3
+    # print(legends)
+    # plot_reward(dirs, legends, fname='Swimmer-v2', shade=True)
 
-    dirs = glob('Walker2d*') + ['../Walker2d-v2/Walker2d-v2-network_64-network_ratio_1.-reward_scaling-1.']
-    legends = [d[-10:] for d in dirs]
-    legends[-1] = 'original'
-    plot_reward(dirs, legends, num=1000, shade=False, fname='Walker2d-v2')
+    # dirs = glob('Walker2d*') + ['../Walker2d-v2/Walker2d-v2-network_64-network_ratio_1.-reward_scaling-1.'] + glob('../pop_art/Walker2d-v2*')
+    dirs = glob('./backup/Walker2d*') + glob('../Walker2d-v2/Walker2d-v2-network_64-network_ratio_1.-reward_scaling-1*') + glob('../pop_art/Walker2d-v2*')
+    # legends = [d[-10:] for d in dirs]
+    # legends[-4] = 'original'
+    # legends[-3:] = ['pop_art']*3
+    # plot_reward(dirs, legends, num=1000, shade=False, fname='Walker2d-v2')
+    # get_perf(dirs)
 
-    dirs = glob('Hopper-v2*') + ['../Hopper-v2/Hopper-v2-network_64-network_ratio_1.-reward_scaling-1-seed_1']
-    legends = [d[-10:] for d in dirs]
-    legends[-1] = 'original'
-    plot_reward(dirs, legends, num=1000, shade=False, fname='Hopper-v2')
+    dirs = glob('Hopper-v2*') + glob('../Hopper-v2/Hopper-v2-network_64-network_ratio_.5-reward_scaling-1*') + glob('../pop_art/Hopper-v2*')
+    # legends = [d[-10:] for d in dirs]
+    # legends[-4] = 'original'
+    # legends[-3:] = ['pop_art']*3
+    # print(legends)
+    # plot_reward(dirs, dirs, num=1000, shade=True, fname='Hopper-v2')
+    # get_perf(dirs)
 
-    dirs = glob('HalfCheetah-v2*') + ['../HalfCheetah-v2/HalfCheetah-v2-network_64-network_ratio_1.-reward_scaling-1.']
-    legends = [d[-10:] for d in dirs]
-    legends[-1] = 'original'
-    plot_reward(dirs, legends, num=1000, shade=False, fname='HalfCheetah=v2')
+    dirs = glob('HalfCheetah-v2*') + glob('../HalfCheetah-v2/HalfCheetah-v2-network_64-network_ratio_1.-reward_scaling-1*') + glob('../pop_art/HalfCheetah-v2*')
+    get_perf(dirs)
+    # legends = [d[-10:] for d in dirs]
+    # legends[-2] = 'original'
+    # legends[-1:] = ['pop_art']
+    # plot_reward(dirs, legends, num=1000, shade=True, fname='HalfCheetah-v2')
 
-    dirs = glob('Ant-v2*') + ['../Ant-v2/Ant-v2-network_64-network_ratio_1.-reward_scaling-1']
-    legends = [d[-10:] for d in dirs]
-    legends[-1] = 'original'
-    plot_reward(dirs, legends, num=1000, shade=False, fname='Ant-v2')
+    dirs = glob('Ant-v2*') + glob('../Ant-v2/Ant-v2-network_64-network_ratio_1.-reward_scaling-1*') + glob('../pop_art/Ant-v2*')
+    get_perf(dirs)
+    # legends = [d[-10:] for d in dirs]
+    # legends[-4] = 'original'
+    # legends[-3:] = ['pop_art']*3
+    # plot_reward(dirs, legends, num=1000, shade=False, fname='Ant-v2')
