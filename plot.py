@@ -331,9 +331,16 @@ if __name__ == '__main__':
 
     # our method
     # dirs = glob('Swimmer*') + glob('../Swimmer-v2/Swimmer-v2-network_64-network_ratio_1.-reward_scaling-1*') + glob('../pop_art/Swimmer-v2*')
-    dirs = glob('*adaptive*')
-    get_perf(dirs)
+    dirs = glob('Hopper*adaptive*')
+    dirs = glob('HalfCheetah*adaptive*')
+    dirs = glob('Swimmer*adaptive*')
+    legends = [d[-15:] for d in dirs]
+    plot_reward(dirs, legends, shade=False)
+    
     input()
+
+    # get_perf(dirs)
+    # iput()
     # legends = [d[-10:] for d in dirs]
     # legends[-4] = 'original'
     # legends[-3:] = ['pop_art']*3

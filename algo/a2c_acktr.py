@@ -58,6 +58,7 @@ class A2C_ACKTR(object):
             self.optimizer = optim.RMSprop(
                 self.actor_critic.parameters(), self.lr, eps=self.eps, alpha=self.alpha)
     
+    """
     def update_param(self, Y):
         self.mu_new = self.mu
         self.Sigma_new = self.Sigma
@@ -143,6 +144,7 @@ class A2C_ACKTR(object):
 
         return avg_delta.item(), action_loss.item(), dist_entropy.item()
 
+    """
     def update(self, rollouts, update_actor):
         obs_shape = rollouts.observations.size()[2:]
         action_shape = rollouts.actions.size()[-1]
@@ -157,7 +159,7 @@ class A2C_ACKTR(object):
         values = values.view(num_steps, num_processes, 1)
         action_log_probs = action_log_probs.view(num_steps, num_processes, 1)
 
-        advantages = rollouts.returns[:-1] - values
+        advantages = self.actor_critic.scale * rollouts.returns[:-1] - values
         value_loss = advantages.pow(2).mean()
 
         action_loss = -(advantages.detach() * action_log_probs).mean()

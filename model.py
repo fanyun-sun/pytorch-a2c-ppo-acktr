@@ -69,6 +69,7 @@ class Policy(nn.Module):
 
     def get_value(self, inputs, states, masks):
         value, _, _ = self.base(inputs, states, masks)
+        value /= self.scale
         return value
     
     def base_forward(self, inputs):
@@ -266,8 +267,8 @@ class MLPBase(nn.Module):
         # self.critic = self.linear3(self.relu2)
 
         # hidden_critic = (self.critic1(inputs)/self.scale + self.critic2(inputs))/2
-        hidden_critic = self.network_ratio * self.critic1(inputs)/self.scale + (1-self.network_ratio) * self.critic2(inputs)
-        # hidden_critic = self.critic1(inputs)/self.scale
+        # hidden_critic = self.network_ratio * self.critic1(inputs)/self.scale + (1-self.network_ratio) * self.critic2(inputs)
+        hidden_critic = self.critic1(inputs)
         # hidden_critic = (self.critic1(inputs) + self.critic2(inputs))/2
         hidden_actor = self.actor(inputs)
 

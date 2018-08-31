@@ -151,7 +151,7 @@ def main():
             # Obser reward and next obs
             obs, reward, done, info = envs.step(cpu_actions)
 
-            reward *= args.reward_scaling
+            # reward *= args.reward_scaling
 
             reward = torch.from_numpy(np.expand_dims(np.stack(reward), 1)).float()
             episode_rewards += reward
@@ -189,11 +189,11 @@ def main():
             else:
                 value_loss, action_loss, dist_entropy = agent.update(rollouts, update_actor=False)
         
-        if agent.max_grad_norm < .25 and t - last_scale_t < 100:
-            agent.max_grad_norm += 0.001
+        if agent.max_grad_norm < .5 and t - last_scale_t < 100:
+            agent.max_grad_norm += 0.00001
 
-        ok = (args.load_model is not None) or (j > 50000)
-        if  ok and j % args.adaptive_interval == 0 and j and t - last_scale_t > 100:
+        # ok = (args.load_model is not None) or (j > 50000)
+        if  j % args.adaptive_interval == 0 and j and t - last_scale_t > 100:
             t = j // args.adaptive_interval
 
             R_t = float('{}'.format(final_rewards.mean()))

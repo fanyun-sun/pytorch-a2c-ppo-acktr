@@ -17,27 +17,7 @@ tolerance=$2
 max=.1
 
 
-seed=2
-dir=$env-network_$network_size-network_ratio_$network_ratio-adaptive-$adaptive_interval-$cdec-$cinc-$tolerance-$max-$seed
-
-python main.py --env-name "$env"  \
-               --num-stack 1  \
-               --hidden_size $network_size \
-               --log-dir ./$dir \
-               --scale-interval $scale_interval \
-               --scale-threshold $scale_threshold \
-               --plot-title  $dir \
-               --saturation-log $dir/$dir.sat \
-               --network-ratio $network_ratio \
-               --adaptive-interval $adaptive_interval \
-               --cdec $cdec \
-               --cinc $cinc \
-               --tolerance $tolerance \
-               --log-interval 1000 --max-grad-norm-after $max --seed $seed \
-               --load-model ../saved_models/a2c/"$env"50000.pt \
-               --load-opt ../saved_models/a2c/"$env"50000.opt 
-
-seed=3
+seed=$3
 dir=$env-network_$network_size-network_ratio_$network_ratio-adaptive-$adaptive_interval-$cdec-$cinc-$tolerance-$max-$seed
 
 python main.py --env-name "$env"  \
@@ -54,3 +34,6 @@ python main.py --env-name "$env"  \
                --cinc $cinc \
                --tolerance $tolerance \
                --log-interval 1000 --max-grad-norm-after $max --seed $seed 
+
+               #--load-model ../saved_models/a2c/"$env"50000.pt \
+               #--load-opt ../saved_models/a2c/"$env"50000.opt 
