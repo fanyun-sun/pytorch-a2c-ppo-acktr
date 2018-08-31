@@ -14,7 +14,7 @@ cdec=.9
 cinc=8
 
 tolerance=$2
-max=.01
+max=.1
 
 
 seed=2
@@ -33,7 +33,9 @@ python main.py --env-name "$env"  \
                --cdec $cdec \
                --cinc $cinc \
                --tolerance $tolerance \
-               --log-interval 1000 --max-grad-norm-after $max --seed $seed 
+               --log-interval 1000 --max-grad-norm-after $max --seed $seed \
+               --load-model ../saved_models/a2c/"$env"50000.pt \
+               --load-opt ../saved_models/a2c/"$env"50000.opt 
 
 seed=3
 dir=$env-network_$network_size-network_ratio_$network_ratio-adaptive-$adaptive_interval-$cdec-$cinc-$tolerance-$max-$seed

@@ -39,6 +39,11 @@ def get_args():
     parser.add_argument('--pop-art', action='store_true', default=False,
                         help='whether to use pop-art')
 
+    parser.add_argument('--load-opt', type=str, default=None,
+                        help='')
+    parser.add_argument('--load-model', type=str, default=None,
+                        help='')
+
     parser.add_argument('--lr', type=float, default=7e-4,
                         help='learning rate (default: 7e-4)')
     parser.add_argument('--eps', type=float, default=1e-5,

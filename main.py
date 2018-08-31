@@ -73,8 +73,12 @@ def main():
     obs_shape = envs.observation_space.shape
     obs_shape = (obs_shape[0] * args.num_stack, *obs_shape[1:])
 
-    actor_critic = Policy(obs_shape, envs.action_space, args.recurrent_policy,
-                           args.hidden_size, args)
+
+    if args.load_model is not None:
+        actor_critic = torch.load(args.load_model)[0]
+    else:
+        actor_critic = Policy(obs_shape, envs.action_space, args.recurrent_policy,
+                               args.hidden_size, args)
 
     if envs.action_space.__class__.__name__ == "Discrete":
         action_shape = 1
@@ -90,6 +94,8 @@ def main():
                                eps=args.eps, alpha=args.alpha,
                                max_grad_norm=args.max_grad_norm,
                                pop_art=args.pop_art)
+        if args.load_opt is not None:
+            agent.optimizer = torch.load(args.load_opt)
     elif args.algo == 'ppo':
         agent = algo.PPO(actor_critic, args.clip_param, args.ppo_epoch, args.num_mini_batch,
                          args.value_loss_coef, args.entropy_coef, lr=args.lr,
@@ -182,9 +188,12 @@ def main():
                 value_loss, action_loss, dist_entropy = agent.update(rollouts, update_actor=True)
             else:
                 value_loss, action_loss, dist_entropy = agent.update(rollouts, update_actor=False)
+        
+        if agent.max_grad_norm < .25 and t - last_scale_t < 100:
+            agent.max_grad_norm += 0.001
 
-
-        if j > 100000 and j >= j % args.adaptive_interval == 0 and j and t - last_scale_t > 100:
+        ok = (args.load_model is not None) or (j > 50000)
+        if  ok and j % args.adaptive_interval == 0 and j and t - last_scale_t > 100:
             t = j // args.adaptive_interval
 
             R_t = float('{}'.format(final_rewards.mean()))
@@ -194,6 +203,7 @@ def main():
             m_t = beta * m_t + (1-beta) * R_t
             m_hat = m_t / (1-beta ** t)
             print('m_hat :{}, t_stop: {}'.format(m_hat, t_stop))
+            print('agent.max_grad_nrom, ', agent.max_grad_norm)
             if m_hat > m_max:
                 m_max = m_hat
                 t_stop = 0

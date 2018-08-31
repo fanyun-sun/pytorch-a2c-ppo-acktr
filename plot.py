@@ -330,8 +330,10 @@ if __name__ == '__main__':
     """
 
     # our method
-    dirs = glob('Swimmer*') + glob('../Swimmer-v2/Swimmer-v2-network_64-network_ratio_1.-reward_scaling-1*') + glob('../pop_art/Swimmer-v2*')
-    # get_perf(dirs)
+    # dirs = glob('Swimmer*') + glob('../Swimmer-v2/Swimmer-v2-network_64-network_ratio_1.-reward_scaling-1*') + glob('../pop_art/Swimmer-v2*')
+    dirs = glob('*adaptive*')
+    get_perf(dirs)
+    input()
     # legends = [d[-10:] for d in dirs]
     # legends[-4] = 'original'
     # legends[-3:] = ['pop_art']*3
@@ -339,12 +341,12 @@ if __name__ == '__main__':
     # plot_reward(dirs, legends, fname='Swimmer-v2', shade=True)
 
     # dirs = glob('Walker2d*') + ['../Walker2d-v2/Walker2d-v2-network_64-network_ratio_1.-reward_scaling-1.'] + glob('../pop_art/Walker2d-v2*')
-    dirs = glob('./backup/Walker2d*') + glob('../Walker2d-v2/Walker2d-v2-network_64-network_ratio_1.-reward_scaling-1*') + glob('../pop_art/Walker2d-v2*')
+    # dirs = glob('./backup/Walker2d*') + glob('../Walker2d-v2/Walker2d-v2-network_64-network_ratio_1.-reward_scaling-1*') + glob('../pop_art/Walker2d-v2*')
     # legends = [d[-10:] for d in dirs]
     # legends[-4] = 'original'
     # legends[-3:] = ['pop_art']*3
     # plot_reward(dirs, legends, num=1000, shade=False, fname='Walker2d-v2')
-    # get_perf(dirs)
+    get_perf(dirs)
 
     dirs = glob('Hopper-v2*') + glob('../Hopper-v2/Hopper-v2-network_64-network_ratio_.5-reward_scaling-1*') + glob('../pop_art/Hopper-v2*')
     # legends = [d[-10:] for d in dirs]
@@ -352,7 +354,7 @@ if __name__ == '__main__':
     # legends[-3:] = ['pop_art']*3
     # print(legends)
     # plot_reward(dirs, dirs, num=1000, shade=True, fname='Hopper-v2')
-    # get_perf(dirs)
+    get_perf(dirs)
 
     dirs = glob('HalfCheetah-v2*') + glob('../HalfCheetah-v2/HalfCheetah-v2-network_64-network_ratio_1.-reward_scaling-1*') + glob('../pop_art/HalfCheetah-v2*')
     get_perf(dirs)
