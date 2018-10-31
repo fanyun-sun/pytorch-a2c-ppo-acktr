@@ -1,7 +1,7 @@
 # pytorch-a2c-ppo-acktr
 
 This repo contains the A2C code for the paper [ANS: Adaptive Network Scaling for Deep Rectifier Reinforcement Learning Models](https://arxiv.org/abs/1809.02112). It also implements [Pop-Art](https://arxiv.org/abs/1809.04474).
-Largely based on [pytorch-a2c-ppo-acktr](https://github.com/ikostrikov/pytorch-a2c-ppo-acktr). Please refer to that for introductions or requirements. 
+Please refer to [pytorch-a2c-ppo-acktr](https://github.com/ikostrikov/pytorch-a2c-ppo-acktr) for introductions or requirements of this repository since it is largely based on it. 
 
 ## Training
 
@@ -21,14 +21,14 @@ python main.py --env-name $env  \
 
 ### Important Arguments explained
 
-`--pop-art`: whether to use pop-art or not.
+* `--pop-art`: whether to use pop-art or not.
 
-`--adaptive-interval`: interval for adaptive reward scaling.
+* `--adaptive-interval`: interval for adaptive reward scaling.
 
-`--tolerance`: tolerance for adaptive reward scaling.
+* `--tolerance`: tolerance for adaptive reward scaling.
 
-`--plot-title`: plot title for visdom.
+* `--plot-title`: plot title for visdom server.
 
-`--log-interval`: interval for logging.
+* `--log-interval`: interval for logging.
 
-please refer to `arguments.py` for comprehensive explanation of the parameters.
+please refer to `arguments.py` for comprehensive explanation of all arguments.
