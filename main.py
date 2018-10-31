@@ -2,6 +2,7 @@ import copy
 import glob
 import os
 import time
+import sys
 
 import gym
 import numpy as np
@@ -94,8 +95,6 @@ def main():
                                eps=args.eps, alpha=args.alpha,
                                max_grad_norm=args.max_grad_norm,
                                pop_art=args.pop_art)
-        if args.load_opt is not None:
-            agent.optimizer = torch.load(args.load_opt)
     elif args.algo == 'ppo':
         agent = algo.PPO(actor_critic, args.clip_param, args.ppo_epoch, args.num_mini_batch,
                          args.value_loss_coef, args.entropy_coef, lr=args.lr,
@@ -192,7 +191,6 @@ def main():
         if agent.max_grad_norm < .5 and t - last_scale_t < 100:
             agent.max_grad_norm += 0.00001
 
-        # ok = (args.load_model is not None) or (j > 50000)
         if  j % args.adaptive_interval == 0 and j and t - last_scale_t > 100:
             t = j // args.adaptive_interval
 
@@ -203,7 +201,7 @@ def main():
             m_t = beta * m_t + (1-beta) * R_t
             m_hat = m_t / (1-beta ** t)
             print('m_hat :{}, t_stop: {}'.format(m_hat, t_stop))
-            print('agent.max_grad_nrom, ', agent.max_grad_norm)
+            print('agent.max_grad_norm, ', agent.max_grad_norm)
             if m_hat > m_max:
                 m_max = m_hat
                 t_stop = 0
@@ -235,55 +233,25 @@ def main():
                 m_max = -1e9
             
 
-        if j % args.log_interval == 0:
+        # if j % args.log_interval == 0:
             # this is used for testing saturation
-            relus = actor_critic.base_forward(
-                    rollouts.observations[:-1].view(-1, *rollouts.observations.size()[2:]))
+            # relus = actor_critic.base_forward(
+                    # rollouts.observations[:-1].view(-1, *rollouts.observations.size()[2:]))
 
         rollouts.after_update()
 
-        """
-        if j % args.save_interval == 0 and args.save_dir != "":
-            save_path = os.path.join(args.save_dir, args.algo)
-            try:
-                os.makedirs(save_path)
-            except OSError:
-                pass
-
-            # A really ugly way to save a model to CPU
-            save_model = actor_critic
-            if args.cuda:
-                save_model = copy.deepcopy(actor_critic).cpu()
-
-            save_model = [save_model,
-                            hasattr(envs, 'ob_rms') and envs.ob_rms or None]
-
-            torch.save(save_model, os.path.join(save_path, args.env_name + ".pt"))
-            # torch.save(agent.optimizer, 'optimizer')
-
-        """
-        assert actor_critic.scale == actor_critic.base.scale == scale
-
-        """
-        if  j % args.scale_interval == 0 and j and args.scale_threshold > 1.:
-            actor_critic.rescale(args.reward_ratio)
-            scale *= args.reward_ratio
-            # adam_rescaling(args.reward_ratio, agent.optimizer)
-            rmsprop_rescaling(args.reward_ratio, agent.optimizer)
-
-        """
         if j % args.log_interval == 0:
             end = time.time()
             total_num_steps = (j + 1) * args.num_processes * args.num_steps
 
 
-            relus = log_saturation(fname=args.saturation_log,
-                           first=(j==0),
-                           relus=[relu.cpu().detach().numpy() for relu in relus])
+            # relus = log_saturation(fname=args.saturation_log,
+                           # first=(j==0),
+                           # relus=[relu.cpu().detach().numpy() for relu in relus])
 
-            print("saturation", relus)
-            if j > 0:
-                current_pdrr = incremental_update(current_pdrr, relus)
+            # print("saturation", relus)
+            # if j > 0:
+                # current_pdrr = incremental_update(current_pdrr, relus)
 
             print("Updates {}, num timesteps {}, FPS {}, mean/median reward {:.1f}/{:.1f}, min/max reward {:.1f}/{:.1f}, entropy {:.5f}, value loss {:.5f}, policy loss {:.5f}, scale {:.5f}".
                 format(j, total_num_steps,
@@ -294,20 +262,6 @@ def main():
                        final_rewards.max(), dist_entropy,
                        value_loss, action_loss, scale))
             
-            """
-            if j:
-                cterm = 1-.999 ** (j//args.log_interval)
-            else:
-                cterm = 1.
-            print("current pdrr", np.array(current_pdrr)/cterm)
-
-            if current_pdrr[1]/cterm > args.scale_threshold and j-last_update > args.scale_interval:
-                last_update = j
-                actor_critic.rescale(args.reward_ratio)
-                scale *= args.reward_ratio
-                # adam_rescaling(args.reward_ratio, agent.optimizer)
-                rmsprop_rescaling(args.reward_ratio, agent.optimizer)
-            """
                            
         if args.vis and j % args.vis_interval == 0:
             try:

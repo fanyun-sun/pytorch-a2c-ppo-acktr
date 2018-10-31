@@ -10,21 +10,15 @@ def get_args():
 
     parser.add_argument('--hidden_size', type=int, default=64,
                         help='hidden size of critic(value network)')
-    parser.add_argument('--scale-interval', type=int, default=100000000000,
-                        help='reward scaling internal')
-    parser.add_argument('--scale-threshold', type=float, default=100.,
-                        help='saturation threshold to apply scaling')
     parser.add_argument('--plot-title', type=str, 
                         help='title for visdom plot')
-    parser.add_argument('--saturation-log', type=str, 
-                        help='path to saturation log')
     parser.add_argument('--reward-scaling', type=float,  default=1.,
                         help='reward scaling')
     parser.add_argument('--leaky', action='store_true', default=False,
                         help='whether to use leaky relu instead of relu')
     parser.add_argument('--elu', action='store_true', default=False,
                         help='whether to use elu instead')
-    parser.add_argument('--network-ratio', type=float, default=.1,
+    parser.add_argument('--network-ratio', type=float, default=1.,
                         help='weight for the dynamic scaling network')
     parser.add_argument('--reward-ratio', type=float, default=.95,
                         help='scaling gratio')
@@ -32,17 +26,14 @@ def get_args():
                         help='interval for adaptive reward scaling')
     parser.add_argument('--tolerance', type=int, default=60,
                         help='tolerance for adaptive reward scaling')
-    parser.add_argument('--cinc', type=float, default=4., help='')
-    parser.add_argument('--cdec', type=float, default=.95, help='')
-    parser.add_argument('--max-grad-norm-after', type=float, default=0.5,
-                        help='max norm of gradients after scaling(default: 0.5)')
+    parser.add_argument('--cinc', type=float, default=8., help='')
+    parser.add_argument('--cdec', type=float, default=.9, help='')
     parser.add_argument('--pop-art', action='store_true', default=False,
                         help='whether to use pop-art')
-
-    parser.add_argument('--load-opt', type=str, default=None,
-                        help='')
     parser.add_argument('--load-model', type=str, default=None,
                         help='')
+    parser.add_argument('--max-grad-norm-after', type=float, default=0.5,
+                        help='max-grad-norm  after scaling(default: 0.5)')
 
     parser.add_argument('--lr', type=float, default=7e-4,
                         help='learning rate (default: 7e-4)')
