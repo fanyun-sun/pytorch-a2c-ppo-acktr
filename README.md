@@ -7,16 +7,19 @@ Please refer to [pytorch-a2c-ppo-acktr](https://github.com/ikostrikov/pytorch-a2
 
 Start a `Visdom` server with `python -m visdom.server`, it will serve `http://localhost:8097/` by default.
 
-### Example Usage
+### Example Usage and parameters
 
 ```
 python main.py --env-name $env  \
-               --hidden_size $network_size \
-               --adaptive-interval $adaptive_interval \
-               --tolerance $tolerance \
-               --log-dir ./$dir \
-               --plot-title  $dir \
-               --log-interval 1000 --seed $seed 
+               --hidden_size 64 \
+               --adaptive-interval 100 \
+               --tolerance 60 \
+               --cdec .9 \
+               --cinc 8 \
+               --log-dir ./"$env"-log \
+               --plot-title  $env \
+               --log-interval 1000 
+               --seed 1 
 ```
 
 ### Important Arguments explained
