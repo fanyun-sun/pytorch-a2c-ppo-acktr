@@ -1,7 +1,7 @@
 # pytorch-a2c-ppo-acktr
 
 This repo contains the A2C code for the paper [ANS: Adaptive Network Scaling for Deep Rectifier Reinforcement Learning Models](https://arxiv.org/abs/1809.02112). It also implements [Pop-Art](https://arxiv.org/abs/1809.04474).
-Please refer to [pytorch-a2c-ppo-acktr](https://github.com/ikostrikov/pytorch-a2c-ppo-acktr) for introductions or requirements of this repository since it is largely based on it. 
+Please refer to the repository [pytorch-a2c-ppo-acktr](https://github.com/ikostrikov/pytorch-a2c-ppo-acktr) for detailed introductions or requirements. 
 
 ## Training
 
